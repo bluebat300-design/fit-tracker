@@ -172,9 +172,34 @@ textarea{resize:none;min-height:80px;font-family:inherit}
 .stat-row span:last-child{font-weight:600}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Nav - 5 tabs */
-.nav-btn{font-size:9px}
-.nav-btn svg{width:20px;height:20px}
+/* Nav - 6 tabs */
+.nav-btn{font-size:8px}
+.nav-btn svg{width:18px;height:18px}
+
+/* Qty picker strip */
+.qty-strip{background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:10px;display:none}
+.qty-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.qty-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--text);font-size:24px;font-weight:300;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qty-num-input{width:60px;text-align:center;font-size:18px;font-weight:700;border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;background:#fff;color:var(--text);outline:none}
+.qty-unit-lbl{font-size:13px;color:var(--text2);flex:1}
+.qty-macros{display:flex;gap:6px;flex-wrap:wrap}
+.qty-macro{font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px}
+.qty-macro.cal{background:#fff7ed;color:var(--accent)}
+.qty-macro.pro{background:#dcfce7;color:#15803d}
+.qty-macro.carb{background:#ffedd5;color:#c2410c}
+.qty-macro.fat{background:#e0f2fe;color:#0369a1}
+
+/* Todo tab */
+.todo-item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
+.todo-item:last-child{border-bottom:none}
+.todo-chk{width:24px;height:24px;border-radius:6px;border:2px solid #fcd9b0;background:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;margin-top:1px}
+.todo-chk.chk-done{background:var(--green);border-color:var(--green)}
+.todo-chk svg{width:14px;height:14px;stroke:#fff;stroke-width:2.5;fill:none;display:none}
+.todo-chk.chk-done svg{display:block}
+.todo-txt{flex:1;font-size:15px;line-height:1.4;word-break:break-word;padding-top:2px}
+.todo-txt.txt-done{color:var(--text3);text-decoration:line-through}
+.todo-del{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px 6px;font-size:20px;line-height:1;flex-shrink:0}
+.todo-empty{text-align:center;padding:24px;color:var(--text3);font-size:14px}
 
 /* Sleep tab */
 input[type=time]{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);font-size:18px;font-weight:600;padding:10px 12px;width:100%;outline:none;text-align:center}
@@ -266,6 +291,16 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
     <div style="position:relative;margin-bottom:8px">
       <input type="text" id="meal-name-input" placeholder='Try "3 eggs" or "1 cup oats"' oninput="onFoodInput()" onkeydown="onFoodKey(event)" autocomplete="off">
       <div id="food-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--accent);border-radius:var(--r);box-shadow:0 4px 20px rgba(234,88,12,.15);z-index:50;overflow:hidden;max-height:220px;overflow-y:auto"></div>
+    </div>
+    <div id="qty-strip" class="qty-strip">
+      <div id="qty-food-label" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px"></div>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeQty(-0.5)">-</button>
+        <input class="qty-num-input" type="number" id="qty-num" value="1" min="0.25" step="0.25" oninput="refreshQty()">
+        <span class="qty-unit-lbl" id="qty-unit-lbl"></span>
+        <button class="qty-btn" onclick="changeQty(0.5)">+</button>
+      </div>
+      <div class="qty-macros" id="qty-macros-preview"></div>
     </div>
     <div id="macro-preview" style="display:none;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600">Detected macros - tap to edit</div>
@@ -386,6 +421,32 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
   </div>
 </div>
 
+<div id="page-todo" class="page">
+  <div class="page-header">
+    <div class="page-title">To-Do</div>
+    <div id="todo-badge" class="badge">0 left</div>
+  </div>
+  <div class="quote-banner">
+    <div class="quote-mark">"</div>
+    <div><div class="quote-text">A goal without a plan is just a wish. Write it down, check it off, make it happen.</div><div class="quote-attr">- Antoine de Saint-Exupery</div></div>
+  </div>
+  <div class="card card-sm" style="margin-bottom:16px">
+    <div class="input-row" style="margin-bottom:0">
+      <input type="text" id="todo-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTodo()" style="flex:1">
+      <button class="btn btn-sm" onclick="addTodo()" style="white-space:nowrap;flex-shrink:0;width:auto">Add</button>
+    </div>
+  </div>
+  <div class="section-title">Tasks</div>
+  <div class="card card-sm" id="todo-list">
+    <div class="todo-empty">No tasks yet - add one above</div>
+  </div>
+  <div id="todo-done-wrap" style="display:none">
+    <div class="section-title" style="margin-top:16px">Completed</div>
+    <div class="card card-sm" id="todo-done-list"></div>
+    <button class="btn btn-ghost" onclick="clearDone()" style="margin-top:8px;font-size:14px;padding:10px">Clear completed</button>
+  </div>
+</div>
+
 <nav class="nav">
   <button class="nav-btn active" onclick="showPage('workout',this)" aria-label="Workouts">
     <svg viewBox="0 0 24 24"><path d="M6.5 6.5h11M6.5 17.5h11M4 12h16M9 4v16M15 4v16"/></svg>
@@ -406,6 +467,10 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
   <button class="nav-btn" onclick="showPage('sleep',this)" aria-label="Sleep">
     <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
     Sleep
+  </button>
+  <button class="nav-btn" onclick="showPage('todo',this)" aria-label="To-Do">
+    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    To-Do
   </button>
 </nav>
 
@@ -941,6 +1006,308 @@ const FOODS = [
   ['sports drink gatorade', 'cup',        50,  0,   14,    0],
   ['protein shake',         'cup',       150, 25,    8,    2],
   ['mass gainer shake',     'cup',       650, 45,  110,    9],
+  // Cured meats & sausages
+  ['chorizo pork',          'oz',        130,  6,    0,   11],
+  ['chorizo chicken',       'oz',         55,  7.5,  1,    2.5],
+  ['chorizo beef',          'oz',        120,  5.5,  0.5, 10],
+  ['salami',                'oz',        119,  6,    0.8, 10],
+  ['pepperoni',             'slice',      42,  1.8,  0.2,  3.8],
+  ['prosciutto',            'oz',         70,  7,    0,    4.5],
+  ['pancetta',              'oz',        107,  5,    0,    9.5],
+  ['pastrami',              'oz',         41,  6,    0.5,  1.6],
+  ['corned beef',           'oz',         57,  7,    0,    3],
+  ['mortadella',            'oz',         88,  4.6,  0.7,  7.6],
+  ['bologna',               'slice',      89,  3,    1,    8],
+  ['kielbasa',              'oz',         87,  5,    2,    7],
+  ['bratwurst',             'link',      283, 12,    2,   25],
+  ['andouille sausage',     'oz',         80,  5,    1,    6],
+  ['breakfast sausage patty','patty',    130,  7,    1,   11],
+  ['summer sausage',        'oz',         90,  5,    0.5,  8],
+  ['chicken sausage',       'link',      110, 12,    4,    5],
+  ['liverwurst',            'oz',         93,  4,    0.5,  8],
+  // More beef cuts
+  ['beef short ribs',       'oz',         98,  7,    0,    8],
+  ['beef brisket',          'oz',         75,  8,    0,    4.5],
+  ['chuck roast',           'oz',         67,  8,    0,    3.5],
+  ['tri-tip steak',         'oz',         65,  8.5,  0,    3],
+  ['beef liver',            'oz',         38,  5.8,  1,    1.3],
+  ['meatloaf',              'oz',         80,  5.5,  4,    4.5],
+  ['meatball',              'meatball',   60,  4,    3,    3.5],
+  ['beef stew',             'cup',       220, 20,   16,    8],
+  // More poultry
+  ['duck breast',           'oz',         57,  8,    0,    2.5],
+  ['ground chicken',        'oz',         48,  7.5,  0,    2],
+  ['chicken liver',         'oz',         49,  7,    1,    2.1],
+  ['deli ham',              'slice',      35,  5,    0.7,  1.3],
+  ['canadian bacon',        'slice',      30,  5,    0.3,  1],
+  // More seafood
+  ['smoked salmon',         'oz',         33,  5.2,  0,    1.2],
+  ['mackerel',              'oz',         74,  7,    0,    5],
+  ['rainbow trout',         'oz',         54,  7.5,  0,    2.7],
+  ['catfish',               'oz',         33,  5.8,  0,    1.1],
+  ['sea bass',              'oz',         37,  6.8,  0,    1],
+  ['oysters',               'oz',         19,  2,    1.1,  0.6],
+  ['mussels',               'oz',         28,  3.8,  1.5,  0.8],
+  ['anchovies',             'oz',         42,  5.8,  0,    1.9],
+  ['squid calamari',        'oz',         26,  4.5,  0.9,  0.4],
+  ['octopus',               'oz',         46,  8.4,  1.2,  0.6],
+  ['herring',               'oz',         67,  5.8,  0,    4.9],
+  ['dungeness crab',        'oz',         28,  5.8,  0.2,  0.3],
+  ['snow crab legs',        'oz',         27,  5.4,  0.1,  0.4],
+  // More dairy & cheese
+  ['feta cheese',           'oz',         75,  4,    1.2,  6],
+  ['swiss cheese',          'oz',        108,  8,    1.5,  8],
+  ['gouda',                 'oz',        101,  7.1,  0.6,  7.8],
+  ['provolone',             'oz',         98,  7.3,  0.6,  7.6],
+  ['american cheese',       'slice',      94,  5.4,  2.2,  7],
+  ['brie',                  'oz',         95,  5.9,  0.1,  7.9],
+  ['blue cheese',           'oz',        100,  6.1,  0.7,  8.2],
+  ['colby jack cheese',     'oz',        110,  7,    0.7,  9],
+  ['pepper jack cheese',    'oz',        110,  7,    0.3,  9],
+  ['kefir',                 'cup',       110, 11,   12,    2],
+  ['skyr',                  'cup',       130, 23,    9,    0],
+  ['buttermilk',            'cup',        99,  8,   12,    2.2],
+  ['chocolate milk',        'cup',       190,  8,   30,    5],
+  ['paneer',                'oz',         80,  6.5,  1,    6],
+  // Eggs (more)
+  ['scrambled eggs',        '2 eggs',    180, 12,    2,   14],
+  ['fried egg',             'egg',        90,  6,    0,    7],
+  ['hard boiled egg',       'egg',        77,  6,    0.6,  5],
+  ['deviled egg',           'half',       55,  3,    0.5,  4.5],
+  // Breakfast foods
+  ['pancake',               'medium',    175,  4,   28,    6],
+  ['waffle',                'large',     218,  6,   25,   11],
+  ['french toast',          'slice',     145,  5,   19,    7],
+  ['breakfast burrito',     'burrito',   350, 18,   32,   14],
+  ['hash browns',           'cup',       326,  4,   44,   15],
+  ['muffin blueberry',      'muffin',    340,  5,   52,   14],
+  ['muffin bran',           'muffin',    190,  5,   38,    5],
+  ['donut glazed',          'donut',     269,  3,   30,   15],
+  ['croissant',             'croissant', 231,  5,   26,   12],
+  ['biscuit',               'biscuit',   212,  4,   27,   10],
+  ['grits',                 'cup cooked',182,  4,   38,    1],
+  ['avocado toast',         'slice',     215,  5,   20,   14],
+  ['overnight oats',        'cup',       280, 13,   46,    5],
+  ['acai bowl',             'bowl',      350,  8,   52,   14],
+  // Mexican foods
+  ['chorizo',               'oz',        130,  6,    0,   11],
+  ['carnitas',              'oz',         62,  7.5,  0,    3.5],
+  ['al pastor',             'oz',         52,  7,    1,    2.3],
+  ['carne asada',           'oz',         60,  8,    0.5,  2.8],
+  ['birria beef',           'oz',         55,  7.5,  0.5,  2.7],
+  ['tamale',                'tamale',    285,  9,   38,   11],
+  ['enchilada chicken',     'enchilada', 280, 16,   28,   10],
+  ['quesadilla chicken',    'quesadilla',430, 30,   35,   16],
+  ['burrito chicken',       'burrito',   490, 26,   60,   14],
+  ['taco chicken',          'taco',      170, 12,   14,    6],
+  ['taco shell',            'shell',      65,  1,    9,    3],
+  ['nachos with cheese',    'cup',       346, 10,   36,   18],
+  ['pico de gallo',         'tbsp',        5,  0.2,  1,    0],
+  ['salsa verde',           'tbsp',        4,  0.2,  0.8,  0],
+  ['chile relleno',         'chile',     285, 15,   14,   19],
+  ['horchata',              'cup',       218,  1,   50,    3.4],
+  ['pozole',                'cup',       170, 15,   24,    2],
+  ['menudo',                'cup',       185, 14,   20,    5],
+  // Italian foods
+  ['pasta marinara',        'cup',       320, 11,   52,    7],
+  ['pasta bolognese',       'cup',       380, 22,   48,   10],
+  ['lasagna',               'serving',   400, 24,   39,   14],
+  ['chicken parmesan',      'serving',   370, 38,   22,   14],
+  ['fettuccine alfredo',    'cup',       490, 15,   52,   24],
+  ['risotto',               'cup',       370, 10,   64,   10],
+  ['pizza margherita',      'slice',     270, 11,   35,    9],
+  ['pizza pepperoni',       'slice',     320, 14,   36,   14],
+  ['calzone',               'serving',   450, 20,   50,   18],
+  ['bruschetta',            'slice',     130,  4,   20,    4],
+  ['caprese salad',         'serving',   180, 10,    4,   14],
+  ['gnocchi',               'cup',       250,  6,   52,    1.5],
+  // Asian foods
+  ['fried rice',            'cup',       333,  7.5, 58,    7],
+  ['teriyaki chicken',      'oz',         50,  8,    2,    1.5],
+  ['lo mein',               'cup',       310, 12,   48,    8],
+  ['pad thai',              'cup',       360, 16,   45,   12],
+  ['spring roll fresh',     'roll',      100,  3,   16,    3],
+  ['spring roll fried',     'roll',      150,  3.5, 20,    6],
+  ['dumpling gyoza',        'piece',      45,  2,    5.5,  1.5],
+  ['potsticker',            'piece',      50,  2.5,  6,    1.8],
+  ['sushi roll california', 'piece',      39,  1.5,  5.5,  1],
+  ['sushi roll spicy tuna', 'piece',      40,  2.5,  4.5,  1.5],
+  ['sushi rice',            'cup',       240,  5,   52,    0.4],
+  ['miso soup',             'cup',        40,  3,    5,    1],
+  ['ramen bowl',            'bowl',      600, 28,   74,   16],
+  ['pho beef',              'bowl',      450, 32,   50,    8],
+  ['banh mi',               'sandwich',  500, 24,   56,   18],
+  ['bulgogi beef',          'oz',         72,  7,    3,    4],
+  ['orange chicken',        'oz',         71,  4.5,  8,    2.5],
+  ['kung pao chicken',      'cup',       350, 28,   20,   14],
+  ['egg roll',              'roll',      200,  7,   22,    8],
+  ['wonton soup',           'cup',       110,  6,   15,    2.5],
+  ['chow mein',             'cup',       300, 10,   42,    9],
+  ['udon noodles',          'cup cooked',210,  7,   43,    1],
+  ['soba noodles',          'cup cooked',113,  6,   24,    0.1],
+  ['bibimbap',              'bowl',      560, 30,   80,   10],
+  // Indian foods
+  ['chicken tikka masala',  'cup',       380, 30,   14,   22],
+  ['butter chicken',        'cup',       360, 28,   12,   22],
+  ['saag paneer',           'cup',       280, 14,   14,   18],
+  ['chana masala',          'cup',       285, 12,   45,    6],
+  ['dal lentil soup',       'cup',       220, 14,   32,    4],
+  ['samosa',                'piece',     135,  4,   18,    6],
+  ['biryani chicken',       'cup',       350, 22,   48,    8],
+  ['tandoori chicken',      'oz',         42,  7,    0.5,  1.3],
+  ['chapati roti',          'roti',      100,  3,   18,    2],
+  ['mango lassi',           'cup',       180,  5,   30,    5],
+  ['raita',                 'tbsp',       10,  0.5,  1,    0.3],
+  // Mediterranean
+  ['falafel',               'piece',      57,  2.3,  5.4,  3],
+  ['tzatziki',              'tbsp',       15,  0.5,  1,    1],
+  ['shawarma chicken',      'oz',         52,  7.5,  0.5,  2.3],
+  ['gyro lamb',             'oz',         72,  6.5,  2,    4.5],
+  ['tabbouleh',             'cup',       118,  4,   16,    5],
+  ['greek salad',           'cup',        90,  3,    8,    6],
+  ['kebab beef',            'oz',         65,  7.5,  1,    3.5],
+  ['kebab chicken',         'oz',         45,  7.5,  0.5,  1.5],
+  ['spanakopita',           'piece',     180,  6,   16,   10],
+  ['dolma',                 'piece',      35,  0.5,  4.5,  1.7],
+  // More American/fast food
+  ['chicken sandwich',      'sandwich',  470, 26,   47,   20],
+  ['cheeseburger',          'burger',    490, 25,   40,   22],
+  ['bacon cheeseburger',    'burger',    600, 35,   42,   30],
+  ['fish sandwich',         'sandwich',  390, 15,   42,   18],
+  ['BLT sandwich',          'sandwich',  370, 16,   30,   20],
+  ['club sandwich',         'sandwich',  540, 28,   50,   22],
+  ['mac and cheese',        'cup',       360, 12,   46,   14],
+  ['pulled pork sandwich',  'sandwich',  480, 28,   52,   14],
+  ['chicken wings buffalo', 'wing',       75,  6,    2,    5],
+  ['chicken tender',        'tender',    102,  9,    7,    4],
+  ['mozzarella sticks',     'stick',      90,  4,    7,    5],
+  ['onion rings',           'ring',       35,  0.6,  5,    1.5],
+  ['french fries',          'medium',    320,  4,   42,   15],
+  ['chick-fil-a sandwich',  'sandwich',  440, 28,   40,   19],
+  ['chick-fil-a nuggets',   '8 pieces',  260, 27,   11,   12],
+  ['subway bmt 6in',        'sub',       410, 20,   46,   16],
+  ['subway meatball 6in',   'sub',       480, 23,   51,   18],
+  ['taco bell crunchy taco','taco',      170,  8,   13,    9],
+  ['panera mac cheese',     'serving',   370, 16,   52,   12],
+  // Starbucks & coffee drinks
+  ['latte whole milk',      'cup',       190, 10,   15,   10],
+  ['latte 2% milk',         'cup',       160, 10,   15,    6],
+  ['latte oat milk',        'cup',       120,  4,   16,    5],
+  ['cappuccino',            '6oz',        80,  4,    8,    3],
+  ['americano',             'cup',        10,  0.3,  1,    0],
+  ['espresso',              'shot',        5,  0.3,  0.5,  0],
+  ['matcha latte',          'cup',       160,  6,   20,    7],
+  ['chai latte',            'cup',       200,  6,   32,    5],
+  ['cold brew coffee',      'cup',        15,  0.5,  2,    0],
+  // Energy & protein drinks
+  ['monster energy',        'can',       200,  2,   52,    0],
+  ['red bull',              'can',       110,  1,   28,    0],
+  ['celsius energy drink',  'can',        10,  0,    2,    0],
+  ['premier protein shake', 'bottle',    160, 30,    5,    3],
+  ['fairlife milk',         'cup',       150, 13,   12,    8],
+  ['core power protein',    'bottle',    230, 42,   14,    5],
+  ['gatorade',              'bottle',    140,  0,   36,    0],
+  ['gatorade zero',         'bottle',     10,  0,    2,    0],
+  ['powerade',              'bottle',    130,  0,   34,    0],
+  ['kombucha',              'cup',        30,  0,    8,    0],
+  ['chocolate milk protein','cup',       190, 15,   25,    5],
+  // More sauces & condiments
+  ['BBQ sauce',             'tbsp',       29,  0.2,  7,    0.1],
+  ['teriyaki sauce',        'tbsp',       16,  0.5,  3.5,  0],
+  ['caesar dressing',       'tbsp',       77,  0.8,  0.8,  8],
+  ['blue cheese dressing',  'tbsp',       80,  0.8,  1,    8],
+  ['honey mustard',         'tbsp',       30,  0.4,  5,    1],
+  ['chipotle mayo',         'tbsp',       90,  0,    1,   10],
+  ['thousand island',       'tbsp',       59,  0.2,  2.4,  5.4],
+  ['guacamole',             'tbsp',       24,  0.3,  1.4,  2.1],
+  ['enchilada sauce',       'tbsp',        6,  0.2,  1,    0.2],
+  ['hoisin sauce',          'tbsp',       35,  0.6,  7,    0.5],
+  ['oyster sauce',          'tbsp',       18,  0.6,  4,    0],
+  ['fish sauce',            'tbsp',       10,  1.4,  0.9,  0],
+  ['coconut aminos',        'tbsp',       10,  0.4,  2,    0],
+  ['worcestershire sauce',  'tbsp',       13,  0,    3.3,  0],
+  ['lemon juice',           'tbsp',        4,  0.1,  1.3,  0],
+  ['apple cider vinegar',   'tbsp',        3,  0,    0.5,  0],
+  // More vegetables
+  ['butternut squash',      'cup',        82,  1.8, 22,    0.2],
+  ['acorn squash',          'cup',       115,  2.3, 30,    0.3],
+  ['spaghetti squash',      'cup cooked', 42,  1,   10,    0.4],
+  ['plantain',              'medium',    218,  1.7, 57,    0.5],
+  ['turnip',                'cup',        36,  1.2,  8,    0.1],
+  ['parsnip',               'cup',       100,  1.6, 24,    0.4],
+  ['fennel',                'cup',        27,  1.1,  6.3,  0.2],
+  ['leek',                  'cup',        54,  1.3, 12,    0.3],
+  ['bok choy cooked',       'cup',        20,  2.6,  3,    0.3],
+  ['swiss chard',           'cup raw',     7,  0.6,  1.4,  0.1],
+  ['collard greens',        'cup cooked', 49,  4,    9,    0.7],
+  ['bamboo shoots',         'cup',        25,  2.3,  4.5,  0.5],
+  ['water chestnuts',       'cup',       120,  2,   30,    0.1],
+  ['artichoke hearts',      'cup',        89,  6.2, 19,    0.6],
+  ['hearts of palm',        'cup',        41,  3.7,  7.3,  0.9],
+  ['jicama',                'cup',        46,  0.9, 11,    0.1],
+  ['tomatillo',             'cup',        42,  1.3,  7.8,  1.3],
+  // More fruits
+  ['papaya',                'cup',        55,  0.9, 14,    0.2],
+  ['guava',                 'medium',     37,  1.4,  8,    0.5],
+  ['cantaloupe',            'cup',        54,  1.3, 13,    0.3],
+  ['honeydew',              'cup',        61,  0.9, 15,    0.2],
+  ['pomegranate seeds',     'cup',       144,  2.9, 32,    2],
+  ['dried mango',           'oz',         90,  0.5, 21,    0.5],
+  ['dried apricot',         'oz',         67,  0.9, 17,    0.1],
+  ['dried fig',             'fig',        21,  0.3,  5.4,  0.1],
+  ['prune',                 'piece',      23,  0.2,  6,    0],
+  ['clementine',            'clementine', 35,  0.6,  9,    0.1],
+  ['coconut flesh',         'oz',         99,  0.9,  4.3,  9.4],
+  ['avocado half',          'half',      120,  1.5,  6,   11],
+  ['dragon fruit',          'cup',       102,  2,   22,    3],
+  ['lychee',                'oz',         19,  0.3,  4.9,  0.1],
+  // More grains & breads
+  ['millet',                'cup cooked',207,  6,   41,    1.7],
+  ['bulgur',                'cup cooked',151,  5.6, 34,    0.4],
+  ['buckwheat',             'cup cooked',155,  5.7, 33,    1],
+  ['wild rice',             'cup cooked',166,  6.5, 35,    0.6],
+  ['polenta',               'cup cooked',145,  3.6, 31,    0.8],
+  ['amaranth',              'cup cooked',251,  9.3, 46,    3.9],
+  ['orzo',                  'cup cooked',253,  8.6, 50,    1.3],
+  ['spaghetti',             'cup cooked',220,  8,   43,    1.3],
+  ['penne pasta',           'cup cooked',220,  8,   43,    1.3],
+  ['gnocchi pasta',         'cup',       250,  6,   52,    1.5],
+  ['cornbread',             'piece',     173,  3,   28,    6],
+  ['brioche bun',           'bun',       280,  8,   38,   10],
+  ['hawaiian roll',         'roll',      100,  3,   17,    2],
+  ['dinner roll',           'roll',       87,  3,   15,    2],
+  ['ciabatta',              'slice',     135,  4.5, 26,    1],
+  ['french bread',          'slice',      92,  3.3, 18,    0.7],
+  ['focaccia',              'piece',     175,  5,   27,    5],
+  ['flour tortilla large',  'tortilla',  290,  8,   50,    7],
+  ['low carb tortilla',     'tortilla',   45,  3,   11,    1.5],
+  ['high protein pasta',    'cup cooked',220, 14,   34,    2.5],
+  // More snacks & desserts
+  ['beef stick snack',      'stick',      60,  5,    0.5,  4],
+  ['turkey stick snack',    'stick',      50,  6,    1,    2],
+  ['rice krispie treat',    'bar',        90,  1,   17,    2],
+  ['fig newton',            'cookie',     56,  0.6, 11,    1],
+  ['oreo cookie',           'cookie',     53,  0.6,  7.5,  2.3],
+  ['graham cracker',        'cracker',    59,  1,   11,    1.5],
+  ['cheetos',               'oz',        160,  2,   15,   10],
+  ['doritos',               'oz',        140,  2,   18,    7],
+  ['pringles',              'oz',        150,  1.5, 15,    9],
+  ['fritos',                'oz',        160,  2,   16,   10],
+  ['banana chips',          'oz',        147,  0.7, 17,   10],
+  ['dried edamame snack',   'oz',        130, 11,    9,    5],
+  ['pork rinds',            'oz',        153, 17,    0,    9],
+  ['peanut butter crackers','serving',   190,  5,   22,    9],
+  ['animal crackers',       'serving',   120,  2,   22,    3.5],
+  ['cheese puffs',          'oz',        160,  2,   15,   10],
+  ['dark chocolate 70%',    'oz',        170,  2.5, 13,   12],
+  ['milk chocolate',        'oz',        153,  2,   17,    8.5],
+  ['gummy worms',           'oz',         90,  2,   22,    0],
+  ['swedish fish',          'oz',        100,  0,   24,    0],
+  ['sour patch kids',       'oz',        100,  0,   25,    0],
+  ['m&ms',                  'oz',        140,  2,   19,    6],
+  ['skittles',              'oz',        115,  0,   26,    1],
+  ['protein cookie',        'cookie',    180, 15,   21,    6],
+  ['protein muffin',        'muffin',    200, 18,   22,    5],
 ];
 
 
@@ -962,18 +1329,55 @@ function parseFood(text){
   return {qty,unit,name:rest};
 }
 
+function levenshtein(a,b){
+  const m=a.length,n=b.length;
+  if(!m)return n; if(!n)return m;
+  const dp=[];
+  for(let i=0;i<=m;i++){dp[i]=[i];for(let j=1;j<=n;j++)dp[i][j]=0;}
+  for(let j=0;j<=n;j++)dp[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)
+    dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function fuzzyScore(q,fname){
+  if(fname===q)return 20;
+  if(fname.startsWith(q))return 15;
+  if(fname.includes(q))return 12;
+  const qwords=q.split(' ').filter(w=>w.length>1);
+  const fwords=fname.split(' ');
+  let score=0;
+  for(const qw of qwords){
+    let best=0;
+    for(const fw of fwords){
+      if(fw===qw){best=Math.max(best,8);break;}
+      if(fw.startsWith(qw)){best=Math.max(best,6);break;}
+      if(fw.includes(qw)){best=Math.max(best,4);}
+      const maxDist=qw.length<=3?1:qw.length<=5?2:3;
+      const d=levenshtein(qw,fw);
+      if(d<=maxDist)best=Math.max(best,5-d);
+    }
+    score+=best;
+  }
+  if(score===0&&q.length>=3){
+    const d=levenshtein(q,fname);
+    if(d<=Math.floor(q.length/2))score=4-d;
+  }
+  return score;
+}
+
 function lookupFood(text){
   if(!text||text.length<2)return[];
   const {qty,name}=parseFood(text);
-  const q=name.toLowerCase();
-  const results=[];
+  const q=name.toLowerCase().trim();
+  if(!q)return[];
+  const scored=[];
   for(const f of FOODS){
-    const fname=f[0];
-    if(fname.includes(q)||q.includes(fname)||fname.split(' ').some(w=>w.startsWith(q))){
-      results.push({fname,unit:f[1],cal:Math.round(f[2]*qty),pro:Math.round(f[3]*qty*10)/10,carb:Math.round(f[4]*qty*10)/10,fat:Math.round(f[5]*qty*10)/10,qty,displayName:qty===1?fname:`${qty} ${fname}`});
-    }
+    const s=fuzzyScore(q,f[0]);
+    if(s>0)scored.push({fname:f[0],unit:f[1],_base:f,cal:Math.round(f[2]*qty),pro:Math.round(f[3]*qty*10)/10,carb:Math.round(f[4]*qty*10)/10,fat:Math.round(f[5]*qty*10)/10,qty,score:s,displayName:qty===1?f[0]:`${qty} ${f[0]}`});
   }
-  return results.slice(0,6);
+  scored.sort((a,b)=>b.score-a.score);
+  return scored.slice(0,8);
 }
 
 let dropdownIdx=-1;
@@ -1017,18 +1421,46 @@ function onFoodKey(e){
   else if(e.key==='Escape'){dd.style.display='none';}
 }
 
+let _pickedFood=null;
+
 function selectFood(idx){
   const dd=document.getElementById('food-dropdown');
   const r=dd._results[idx];
   if(!r)return;
-  document.getElementById('meal-name-input').value=r.displayName;
-  document.getElementById('meal-cal-input').value=r.cal;
-  document.getElementById('meal-pro-input').value=r.pro;
-  document.getElementById('meal-carb-input').value=r.carb;
-  document.getElementById('meal-fat-input').value=r.fat;
   dd.style.display='none';
-  document.getElementById('macro-preview').style.display='block';
+  document.getElementById('macro-preview').style.display='none';
   document.getElementById('macro-fields-manual').style.display='none';
+  _pickedFood=r;
+  document.getElementById('meal-name-input').value=r.fname;
+  document.getElementById('qty-num').value=1;
+  document.getElementById('qty-food-label').textContent=r.fname;
+  document.getElementById('qty-unit-lbl').textContent='x '+r.unit;
+  document.getElementById('qty-strip').style.display='block';
+  refreshQty();
+}
+
+function refreshQty(){
+  if(!_pickedFood)return;
+  const q=Math.max(0.25,parseFloat(document.getElementById('qty-num').value)||1);
+  const b=_pickedFood._base;
+  const cal=Math.round(b[2]*q);
+  const pro=Math.round(b[3]*q*10)/10;
+  const carb=Math.round(b[4]*q*10)/10;
+  const fat=Math.round(b[5]*q*10)/10;
+  document.getElementById('qty-macros-preview').innerHTML=
+    `<span class="qty-macro cal">${cal} cal</span><span class="qty-macro pro">${pro}g P</span><span class="qty-macro carb">${carb}g C</span><span class="qty-macro fat">${fat}g F</span>`;
+  document.getElementById('meal-cal-input').value=cal;
+  document.getElementById('meal-pro-input').value=pro;
+  document.getElementById('meal-carb-input').value=carb;
+  document.getElementById('meal-fat-input').value=fat;
+  document.getElementById('meal-name-input').value=q===1?_pickedFood.fname:`${q} ${_pickedFood.fname}`;
+}
+
+function changeQty(delta){
+  const el=document.getElementById('qty-num');
+  const cur=Math.max(0.25,parseFloat(el.value)||1);
+  el.value=Math.max(0.25,Math.round((cur+delta)*4)/4);
+  refreshQty();
 }
 
 // ----- NUTRITION -----
@@ -1077,6 +1509,8 @@ function addMeal(){
   document.getElementById('macro-preview').style.display='none';
   document.getElementById('macro-fields-manual').style.display='none';
   document.getElementById('food-dropdown').style.display='none';
+  document.getElementById('qty-strip').style.display='none';
+  _pickedFood=null;
   renderNutrition();
   showToast('Meal added!');
 }
@@ -1366,6 +1800,76 @@ document.addEventListener('click',e=>{
   if(dd&&!dd.contains(e.target)&&e.target!==input)dd.style.display='none';
 });
 
+// ----- TODO -----
+function getTodos(){return ls('todos',[]);}
+function saveTodos(t){lss('todos',t);}
+
+function renderTodo(){
+  const todos=getTodos();
+  const active=todos.filter(t=>!t.done);
+  const done=todos.filter(t=>t.done);
+  const badge=document.getElementById('todo-badge');
+  if(badge)badge.textContent=active.length+' left';
+  const list=document.getElementById('todo-list');
+  if(list){
+    if(!active.length){list.innerHTML='<div class="todo-empty">All done! Add a task above.</div>';}
+    else{list.innerHTML=active.map((t,i)=>`
+      <div class="todo-item">
+        <button class="todo-chk" onclick="toggleTodo('${t.id}')" aria-label="Complete">
+          <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        </button>
+        <span class="todo-txt">${t.text}</span>
+        <button class="todo-del" onclick="deleteTodoItem('${t.id}')" aria-label="Delete">x</button>
+      </div>`).join('');}
+  }
+  const doneWrap=document.getElementById('todo-done-wrap');
+  const doneList=document.getElementById('todo-done-list');
+  if(doneWrap&&doneList){
+    if(!done.length){doneWrap.style.display='none';}
+    else{
+      doneWrap.style.display='block';
+      doneList.innerHTML=done.map(t=>`
+        <div class="todo-item">
+          <button class="todo-chk chk-done" onclick="toggleTodo('${t.id}')" aria-label="Undo">
+            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+          </button>
+          <span class="todo-txt txt-done">${t.text}</span>
+          <button class="todo-del" onclick="deleteTodoItem('${t.id}')" aria-label="Delete">x</button>
+        </div>`).join('');
+    }
+  }
+}
+
+function addTodo(){
+  const inp=document.getElementById('todo-input');
+  const text=inp.value.trim();
+  if(!text)return;
+  const todos=getTodos();
+  todos.unshift({id:Date.now().toString(),text,done:false});
+  saveTodos(todos);
+  inp.value='';
+  renderTodo();
+  showToast('Task added!');
+}
+
+function toggleTodo(id){
+  const todos=getTodos();
+  const t=todos.find(t=>t.id===id);
+  if(t)t.done=!t.done;
+  saveTodos(todos);
+  renderTodo();
+}
+
+function deleteTodoItem(id){
+  saveTodos(getTodos().filter(t=>t.id!==id));
+  renderTodo();
+}
+
+function clearDone(){
+  saveTodos(getTodos().filter(t=>!t.done));
+  renderTodo();
+}
+
 // ----- INIT -----
 if(localStorage.getItem('anthropic_api_key')){
   document.getElementById('camera-btn-row').style.display='block';
@@ -1375,6 +1879,7 @@ renderMeals();
 renderWalks();
 renderNutrition();
 renderSleep();
+renderTodo();
 
 // Auto-select today's day on load
 const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
