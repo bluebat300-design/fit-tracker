@@ -249,8 +249,8 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .barcode-manual{background:#000;padding:0 16px 32px}
 .barcode-manual-label{color:#aaa;font-size:13px;text-align:center;margin-bottom:10px;line-height:1.4}
 .barcode-manual-row{display:flex;gap:8px;max-width:360px;margin:0 auto}
-.barcode-manual-row input{flex:1;background:#1a1a1a;border:1.5px solid #444;border-radius:10px;color:#fff;font-size:16px;padding:12px 14px;outline:none}
-.barcode-manual-row input:focus{border-color:var(--accent)}
+.barcode-manual-row input{flex:1;background:#fff;border:1.5px solid #444;border-radius:10px;color:#1c1209;font-size:16px;padding:12px 14px;outline:none}
+.barcode-manual-row input:focus{border-color:var(--accent);background:#fff;color:#1c1209}
 .barcode-manual-row button{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap}
 
 /* Set logging */
@@ -371,7 +371,7 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
       <div class="qty-macros" id="qty-macros-preview"></div>
     </div>
     <div id="macro-preview" style="display:none;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600">Detected macros - tap to edit</div>
+      <div id="macro-preview-label" style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600">Detected macros - tap to edit</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
         <input type="text" id="meal-cal-input" placeholder="Calories" inputmode="decimal" style="font-size:13px;padding:8px 10px">
         <input type="text" id="meal-pro-input" placeholder="Protein (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
@@ -1791,8 +1791,9 @@ function openBarcodeScanner(){
     hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
   }catch(e){hints=null;}
   _barcodeReader=new ZXing.BrowserMultiFormatReader(hints);
-  // Force the REAR camera (facingMode:environment) - default often picks the front camera
-  const constraints={video:{facingMode:{ideal:'environment'}}};
+  // Force the REAR camera (facingMode:environment) - default often picks the front camera.
+  // Higher resolution = sharper frames = better barcode reads.
+  const constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}};
   _barcodeReader.decodeFromConstraints(constraints,'barcode-video',(result,err)=>{
     if(result&&!_barcodeProcessing)onBarcodeDetected(result.getText());
   }).catch(e=>{
@@ -1829,24 +1830,37 @@ async function onBarcodeDetected(code){
     const p=data.product;
     const n=p.nutriments||{};
     const name=(p.product_name||p.generic_name||'Scanned item').toLowerCase().trim()||'scanned item';
-    let cal,pro,carb,fat,unitLabel;
-    if(n['energy-kcal_serving']!=null||n['proteins_serving']!=null){
-      cal=Math.round(n['energy-kcal_serving']||0);
-      pro=Math.round((n['proteins_serving']||0)*10)/10;
-      carb=Math.round((n['carbohydrates_serving']||0)*10)/10;
-      fat=Math.round((n['fat_serving']||0)*10)/10;
-      unitLabel=p.serving_size||'serving';
-    }else{
-      cal=Math.round(n['energy-kcal_100g']||0);
-      pro=Math.round((n['proteins_100g']||0)*10)/10;
-      carb=Math.round((n['carbohydrates_100g']||0)*10)/10;
-      fat=Math.round((n['fat_100g']||0)*10)/10;
-      unitLabel='100g';
+    // Prefer per-serving data when it exists, otherwise fall back to per-100g
+    const hasServing=n['energy-kcal_serving']!=null||n['proteins_serving']!=null||n['carbohydrates_serving']!=null||n['fat_serving']!=null;
+    const suf=hasServing?'_serving':'_100g';
+    const num=v=>(v==null||v==='')?null:parseFloat(v);
+    // Calories: use kcal directly, else convert from kJ (1 kcal = 4.184 kJ)
+    let cal=num(n['energy-kcal'+suf]);
+    if(cal==null){
+      const kj=num(n['energy-kj'+suf])??num(n['energy'+suf]);
+      if(kj!=null)cal=kj/4.184;
     }
+    cal=Math.round(cal||0);
+    const pro=Math.round((num(n['proteins'+suf])||0)*10)/10;
+    const carb=Math.round((num(n['carbohydrates'+suf])||0)*10)/10;
+    const fat=Math.round((num(n['fat'+suf])||0)*10)/10;
+    const unitLabel=hasServing?(p.serving_size||'serving'):'100g';
     saveCustomFood([name,unitLabel,cal,pro,carb,fat]);
     closeBarcodeScanner();
-    pickFood([name,unitLabel,cal,pro,carb,fat]);
-    showToast('Scanned: '+name);
+    // Route into the editable review so the user can verify vs the label before logging
+    _pickedFood=null;
+    document.getElementById('qty-strip').style.display='none';
+    document.getElementById('food-dropdown').style.display='none';
+    document.getElementById('macro-fields-manual').style.display='none';
+    document.getElementById('meal-name-input').value=name;
+    document.getElementById('meal-cal-input').value=cal;
+    document.getElementById('meal-pro-input').value=pro;
+    document.getElementById('meal-carb-input').value=carb;
+    document.getElementById('meal-fat-input').value=fat;
+    document.getElementById('macro-preview-label').textContent='Scanned "'+name+'" (per '+unitLabel+') - check vs the bag & edit if needed, then Add to log';
+    document.getElementById('macro-preview').style.display='block';
+    document.getElementById('macro-preview').scrollIntoView({behavior:'smooth',block:'center'});
+    showToast('Scanned - double-check the numbers');
   }catch(e){
     document.getElementById('barcode-status').textContent='Lookup failed - check your connection and try again';
     console.error(e);
@@ -1925,6 +1939,7 @@ function addMeal(){
   else pushRecent([name,'serving',cal,pro,carb,fat]);
   ['meal-name-input','meal-cal-input','meal-pro-input','meal-carb-input','meal-fat-input','meal-cal-input-m','meal-pro-input-m','meal-carb-input-m','meal-fat-input-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('macro-preview').style.display='none';
+  document.getElementById('macro-preview-label').textContent='Detected macros - tap to edit';
   document.getElementById('macro-fields-manual').style.display='none';
   document.getElementById('food-dropdown').style.display='none';
   document.getElementById('qty-strip').style.display='none';
@@ -2191,6 +2206,7 @@ async function handlePhoto(event){
     document.getElementById('meal-pro-input').value=Math.round(json.pro)||0;
     document.getElementById('meal-carb-input').value=Math.round(json.carb)||0;
     document.getElementById('meal-fat-input').value=Math.round(json.fat)||0;
+    document.getElementById('macro-preview-label').textContent='Detected macros - tap to edit';
     document.getElementById('macro-preview').style.display='block';
     showToast('Food scanned! Review and add.');
   }catch(e){
