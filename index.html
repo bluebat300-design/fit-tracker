@@ -221,6 +221,32 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .sleep-row-stars{font-size:12px;color:var(--text3)}
 .sleep-empty{text-align:center;padding:20px;color:var(--text3);font-size:14px}
 .key-saved-badge{display:inline-flex;align-items:center;gap:5px;background:#dcfce7;border:1px solid #bbf7d0;color:#15803d;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
+
+/* Recent foods */
+.recent-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.recent-chip:active{border-color:var(--accent)}
+.recent-chip .rc-macro{font-size:11px;color:var(--text3)}
+
+/* Barcode scanner modal */
+.barcode-modal{display:none;position:fixed;inset:0;background:#000;z-index:300;flex-direction:column}
+.barcode-modal video{flex:1;width:100%;object-fit:cover;background:#000}
+.barcode-header{display:flex;justify-content:space-between;align-items:center;padding:16px;background:#000}
+.barcode-header .btitle{color:#fff;font-size:15px;font-weight:600}
+.barcode-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1}
+.barcode-status{color:#fff;text-align:center;padding:16px;font-size:14px;background:#000}
+
+/* Set logging */
+.exercise-row.expanded{border-bottom:none}
+.setlog-panel{padding:6px 0 16px 38px;border-bottom:1px solid var(--border)}
+.setlog-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.setlog-num{font-size:12px;color:var(--text3);width:16px;flex-shrink:0}
+.setlog-input{width:64px;text-align:center;font-size:15px;font-weight:600;padding:8px 4px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+.setlog-x{color:var(--text3);font-size:13px}
+.setlog-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 8px}
+.setlog-add{font-size:13px;color:var(--accent);background:none;border:1.5px dashed var(--accent);border-radius:8px;padding:9px;width:100%;cursor:pointer;font-weight:600}
+.ex-last{font-size:11px;color:var(--text3);margin-top:3px}
+.ex-summary{font-size:12px;color:var(--green);margin-top:3px;font-weight:600}
+.ex-log-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--text2);font-size:16px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -272,6 +298,10 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
   <div class="card" style="margin-bottom:16px">
     <div id="prog-bars"></div>
   </div>
+  <div class="section-title" id="recent-foods-title" style="display:none">Recent foods</div>
+  <div class="card card-sm" id="recent-foods-card" style="display:none;margin-bottom:16px">
+    <div id="recent-foods-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
   <div class="section-title">Log a meal</div>
   <div class="card card-sm" style="margin-bottom:16px">
 
@@ -281,6 +311,13 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
         Scan food photo
       </label>
       <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;position:absolute" onchange="handlePhoto(event)">
+    </div>
+
+    <div style="margin-bottom:10px">
+      <button onclick="openBarcodeScanner()" style="display:flex;width:100%;background:var(--bg3);border:1.5px dashed var(--border);border-radius:var(--r);padding:14px;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--text2);font-size:14px;font-weight:600;box-sizing:border-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><line x1="7" y1="7" x2="7" y2="17"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="13" y1="7" x2="13" y2="17"/><line x1="16" y1="8" x2="16" y2="16"/></svg>
+        Scan barcode
+      </button>
     </div>
 
     <div id="scan-status" style="display:none;text-align:center;padding:14px;color:var(--accent);font-size:14px;font-weight:500">
@@ -476,6 +513,16 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 
 <div class="toast" id="toast"></div>
 
+<div id="barcode-modal" class="barcode-modal">
+  <div class="barcode-header">
+    <div class="btitle">Scan barcode</div>
+    <button class="barcode-close" onclick="closeBarcodeScanner()" aria-label="Close">&times;</button>
+  </div>
+  <video id="barcode-video" muted playsinline autoplay></video>
+  <div id="barcode-status" class="barcode-status">Point camera at a barcode...</div>
+</div>
+
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
 const TARGETS = {cal:2925,pro:180,carb:365,fat:81};
 
@@ -573,6 +620,7 @@ let state={
   currentDay:ls('wk_curday',0),
   currentWeek:ls('wk_curweek',1),
   nutrition:ls('nut_'+todayStr,{meals:[],totals:{cal:0,pro:0,carb:0,fat:0}}),
+  setLogs:ls('wk_sets',{}),
 };
 
 // ----- PAGE NAV -----
@@ -679,18 +727,100 @@ function renderDayContent(){
 
   day.exercises.forEach((ex,ei)=>{
     const ck=checks[state.currentDay+'-'+ei];
-    html+=`<div class="exercise-row${ck?' ex-row-checked':''}">
+    const loggedSets=getExSets(ei)||Array.from({length:defaultSetCount(ex)},()=>({weight:'',reps:''}));
+    const summary=formatSets(loggedSets);
+    const last=lastWeekSets(ei);
+    const expanded=expandedSet===ei;
+    html+=`<div class="exercise-row${ck?' ex-row-checked':''}${expanded?' expanded':''}">
       <button class="ex-check${ck?' checked':''}" onclick="toggleEx(${ei})" aria-label="Check off ${ex.name}">
         <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
       </button>
-      <div class="ex-info">
+      <div class="ex-info" onclick="toggleSetLog(${ei})" style="cursor:pointer">
         <div class="ex-name">${ex.name}</div>
         <div class="ex-sets">${ex.sets} sets x ${ex.reps} reps${ex.note?' . '+ex.note:''}</div>
+        ${summary?`<div class="ex-summary">${summary}</div>`:''}
+        ${last?`<div class="ex-last">Last time: ${formatSets(last)}</div>`:''}
       </div>
+      <button class="ex-log-btn" onclick="toggleSetLog(${ei})" aria-label="Log weights">${expanded?'-':'+'}</button>
     </div>`;
+    if(expanded){
+      html+='<div class="setlog-panel">';
+      loggedSets.forEach((s,si)=>{
+        html+=`<div class="setlog-row">
+          <span class="setlog-num">${si+1}</span>
+          <input class="setlog-input" type="number" inputmode="decimal" placeholder="lbs" value="${s.weight}" onchange="updateSetField(${ei},${si},'weight',this.value)">
+          <span class="setlog-x">x</span>
+          <input class="setlog-input" type="number" inputmode="numeric" placeholder="reps" value="${s.reps}" onchange="updateSetField(${ei},${si},'reps',this.value)">
+          <button class="setlog-del" onclick="removeSetRow(${ei},${si})" aria-label="Remove set">&times;</button>
+        </div>`;
+      });
+      html+=`<button class="setlog-add" onclick="addSetRow(${ei})">+ Add set</button></div>`;
+    }
   });
   html+='</div>';
   el.innerHTML=html;
+}
+
+// ----- SET/WEIGHT LOGGING -----
+let expandedSet=null;
+
+function setLogKey(){return state.currentWeek+'-'+state.currentDay;}
+
+function defaultSetCount(ex){
+  const n=parseInt(ex.sets);
+  return isNaN(n)?3:n;
+}
+
+function getExSets(ei){
+  const wk=state.setLogs[setLogKey()]||{};
+  return wk[ei]||null;
+}
+
+function seedSetLog(ei){
+  if(!state.setLogs[setLogKey()])state.setLogs[setLogKey()]={};
+  if(!state.setLogs[setLogKey()][ei]){
+    const ex=SPLIT[state.currentDay].exercises[ei];
+    state.setLogs[setLogKey()][ei]=Array.from({length:defaultSetCount(ex)},()=>({weight:'',reps:''}));
+  }
+  return state.setLogs;
+}
+
+function toggleSetLog(ei){
+  expandedSet=expandedSet===ei?null:ei;
+  renderDayContent();
+}
+
+function updateSetField(ei,si,field,val){
+  const logs=seedSetLog(ei);
+  if(!logs[setLogKey()][ei][si])logs[setLogKey()][ei][si]={weight:'',reps:''};
+  logs[setLogKey()][ei][si][field]=val;
+  lss('wk_sets',logs);
+}
+
+function addSetRow(ei){
+  const logs=seedSetLog(ei);
+  logs[setLogKey()][ei].push({weight:'',reps:''});
+  lss('wk_sets',logs);
+  renderDayContent();
+}
+
+function removeSetRow(ei,si){
+  const logs=seedSetLog(ei);
+  logs[setLogKey()][ei].splice(si,1);
+  lss('wk_sets',logs);
+  renderDayContent();
+}
+
+function lastWeekSets(ei){
+  for(let w=state.currentWeek-1;w>=1;w--){
+    const wk=state.setLogs[w+'-'+state.currentDay];
+    if(wk&&wk[ei]&&wk[ei].some(s=>s.weight||s.reps))return wk[ei];
+  }
+  return null;
+}
+
+function formatSets(sets){
+  return sets.filter(s=>s.weight||s.reps).map(s=>`${s.weight||'-'}x${s.reps||'-'}`).join(', ');
 }
 
 function toggleEx(ei){
@@ -1366,13 +1496,23 @@ function fuzzyScore(q,fname){
   return score;
 }
 
+function getCustomFoods(){return ls('custom_foods',[]);}
+function saveCustomFood(f){
+  let list=getCustomFoods();
+  list=list.filter(x=>x[0].toLowerCase()!==f[0].toLowerCase());
+  list.unshift(f);
+  if(list.length>150)list=list.slice(0,150);
+  lss('custom_foods',list);
+}
+
 function lookupFood(text){
   if(!text||text.length<2)return[];
   const {qty,name}=parseFood(text);
   const q=name.toLowerCase().trim();
   if(!q)return[];
   const scored=[];
-  for(const f of FOODS){
+  const allFoods=FOODS.concat(getCustomFoods());
+  for(const f of allFoods){
     const s=fuzzyScore(q,f[0]);
     if(s>0)scored.push({fname:f[0],unit:f[1],_base:f,cal:Math.round(f[2]*qty),pro:Math.round(f[3]*qty*10)/10,carb:Math.round(f[4]*qty*10)/10,fat:Math.round(f[5]*qty*10)/10,qty,score:s,displayName:qty===1?f[0]:`${qty} ${f[0]}`});
   }
@@ -1423,20 +1563,121 @@ function onFoodKey(e){
 
 let _pickedFood=null;
 
+// f = [name, unit, cal, pro, carb, fat] (values per 1 unit)
+function pickFood(f){
+  _pickedFood={fname:f[0],unit:f[1],_base:f};
+  document.getElementById('food-dropdown').style.display='none';
+  document.getElementById('macro-preview').style.display='none';
+  document.getElementById('macro-fields-manual').style.display='none';
+  document.getElementById('meal-name-input').value=f[0];
+  document.getElementById('qty-num').value=1;
+  document.getElementById('qty-food-label').textContent=f[0];
+  document.getElementById('qty-unit-lbl').textContent='x '+f[1];
+  document.getElementById('qty-strip').style.display='block';
+  refreshQty();
+}
+
 function selectFood(idx){
   const dd=document.getElementById('food-dropdown');
   const r=dd._results[idx];
   if(!r)return;
-  dd.style.display='none';
-  document.getElementById('macro-preview').style.display='none';
-  document.getElementById('macro-fields-manual').style.display='none';
-  _pickedFood=r;
-  document.getElementById('meal-name-input').value=r.fname;
-  document.getElementById('qty-num').value=1;
-  document.getElementById('qty-food-label').textContent=r.fname;
-  document.getElementById('qty-unit-lbl').textContent='x '+r.unit;
-  document.getElementById('qty-strip').style.display='block';
-  refreshQty();
+  pickFood(r._base);
+}
+
+// ----- RECENT FOODS -----
+function getRecents(){return ls('recent_foods',[]);}
+function saveRecents(r){lss('recent_foods',r);}
+
+function pushRecent(f){
+  const[name,unit,cal,pro,carb,fat]=f;
+  let recents=getRecents();
+  recents=recents.filter(r=>r.name.toLowerCase()!==name.toLowerCase());
+  recents.unshift({name,unit,cal,pro,carb,fat});
+  if(recents.length>20)recents=recents.slice(0,20);
+  saveRecents(recents);
+}
+
+function renderRecents(){
+  const recents=getRecents();
+  const card=document.getElementById('recent-foods-card');
+  const title=document.getElementById('recent-foods-title');
+  const list=document.getElementById('recent-foods-list');
+  if(!recents.length){card.style.display='none';title.style.display='none';return;}
+  card.style.display='block';
+  title.style.display='block';
+  list.innerHTML=recents.map((r,i)=>`<div class="recent-chip" onclick="useRecent(${i})"><span>${r.name}</span><span class="rc-macro">${r.cal} cal</span></div>`).join('');
+}
+
+function useRecent(idx){
+  const r=getRecents()[idx];
+  if(!r)return;
+  pickFood([r.name,r.unit,r.cal,r.pro,r.carb,r.fat]);
+}
+
+// ----- BARCODE SCANNER -----
+let _barcodeReader=null;
+
+function openBarcodeScanner(){
+  const modal=document.getElementById('barcode-modal');
+  modal.style.display='flex';
+  document.getElementById('barcode-status').textContent='Point camera at a barcode...';
+  if(typeof ZXing==='undefined'){
+    document.getElementById('barcode-status').textContent='Scanner failed to load - check your connection';
+    return;
+  }
+  _barcodeReader=new ZXing.BrowserMultiFormatReader();
+  _barcodeReader.decodeFromVideoDevice(null,'barcode-video',(result,err)=>{
+    if(result)onBarcodeDetected(result.getText());
+  }).catch(e=>{
+    document.getElementById('barcode-status').textContent='Camera access denied or unavailable';
+    console.error(e);
+  });
+}
+
+function closeBarcodeScanner(){
+  document.getElementById('barcode-modal').style.display='none';
+  if(_barcodeReader){_barcodeReader.reset();_barcodeReader=null;}
+}
+
+async function onBarcodeDetected(code){
+  if(!_barcodeReader)return;
+  _barcodeReader.reset();
+  _barcodeReader=null;
+  document.getElementById('barcode-status').textContent='Looking up '+code+'...';
+  try{
+    const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json');
+    const data=await res.json();
+    if(data.status!==1||!data.product){
+      document.getElementById('barcode-status').textContent='Product not found - try manual entry';
+      setTimeout(closeBarcodeScanner,1800);
+      return;
+    }
+    const p=data.product;
+    const n=p.nutriments||{};
+    const name=(p.product_name||p.generic_name||'Scanned item').toLowerCase().trim()||'scanned item';
+    let cal,pro,carb,fat,unitLabel;
+    if(n['energy-kcal_serving']!=null||n['proteins_serving']!=null){
+      cal=Math.round(n['energy-kcal_serving']||0);
+      pro=Math.round((n['proteins_serving']||0)*10)/10;
+      carb=Math.round((n['carbohydrates_serving']||0)*10)/10;
+      fat=Math.round((n['fat_serving']||0)*10)/10;
+      unitLabel=p.serving_size||'serving';
+    }else{
+      cal=Math.round(n['energy-kcal_100g']||0);
+      pro=Math.round((n['proteins_100g']||0)*10)/10;
+      carb=Math.round((n['carbohydrates_100g']||0)*10)/10;
+      fat=Math.round((n['fat_100g']||0)*10)/10;
+      unitLabel='100g';
+    }
+    saveCustomFood([name,unitLabel,cal,pro,carb,fat]);
+    closeBarcodeScanner();
+    pickFood([name,unitLabel,cal,pro,carb,fat]);
+    showToast('Scanned: '+name);
+  }catch(e){
+    document.getElementById('barcode-status').textContent='Lookup failed - check your connection';
+    console.error(e);
+    setTimeout(closeBarcodeScanner,1800);
+  }
 }
 
 function refreshQty(){
@@ -1488,6 +1729,7 @@ function renderNutrition(){
   }).join('');
 
   renderMealLog();
+  renderRecents();
 }
 
 function addMeal(){
@@ -1505,6 +1747,8 @@ function addMeal(){
   state.nutrition.totals.carb+=carb;
   state.nutrition.totals.fat+=fat;
   lss('nut_'+todayStr,state.nutrition);
+  if(_pickedFood)pushRecent(_pickedFood._base);
+  else pushRecent([name,'serving',cal,pro,carb,fat]);
   ['meal-name-input','meal-cal-input','meal-pro-input','meal-carb-input','meal-fat-input','meal-cal-input-m','meal-pro-input-m','meal-carb-input-m','meal-fat-input-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('macro-preview').style.display='none';
   document.getElementById('macro-fields-manual').style.display='none';
