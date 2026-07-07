@@ -227,6 +227,32 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .recent-chip:active{border-color:var(--accent)}
 .recent-chip .rc-macro{font-size:11px;color:var(--text3)}
 
+/* Diet score */
+.score-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.score-ring{width:84px;height:84px;flex-shrink:0;position:relative}
+.score-ring-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-ring-val{font-size:26px;font-weight:800;line-height:1}
+.score-ring-grade{font-size:11px;font-weight:700;color:var(--text3);margin-top:1px}
+.score-summary{flex:1;font-size:13px;color:var(--text2);line-height:1.5}
+.score-bars{display:flex;flex-direction:column;gap:9px;margin-bottom:4px}
+.score-bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.score-bar-label span:first-child{color:var(--text2);font-weight:600}
+.score-bar-label span:last-child{color:var(--text3);font-weight:600}
+.nutrient-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.nutrient-chip{font-size:11px;font-weight:700;padding:4px 9px;border-radius:12px}
+.nutrient-chip.good{background:#dcfce7;color:#15803d}
+.nutrient-chip.ok{background:#fff7ed;color:#c2410c}
+.nutrient-chip.low{background:#fee2e2;color:#dc2626}
+.score-empty{text-align:center;padding:20px;color:var(--text3);font-size:14px;line-height:1.5}
+
+/* Macro input labels */
+.macro-cell{display:flex;flex-direction:column}
+.macro-input-label{font-size:11px;font-weight:700;margin-bottom:3px;letter-spacing:.02em}
+.macro-input-label.cal{color:var(--accent)}
+.macro-input-label.pro{color:#15803d}
+.macro-input-label.carb{color:#c2410c}
+.macro-input-label.fat{color:#0369a1}
+
 /* Describe meal */
 .desc-review-item{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
 .desc-review-item:last-child{border-bottom:none}
@@ -299,8 +325,8 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
   </div>
 
   <div id="settings-panel" style="display:none;background:#fff;border:1.5px solid var(--border);border-radius:var(--card-r);padding:14px;margin-bottom:16px;box-shadow:var(--shadow)">
-    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">AI photo scanning</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">Paste your Anthropic API key to enable the camera button. Saved only on this device.</div>
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Photo scanning (nutrition labels)</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">Take a photo of a Nutrition Facts label and it reads the numbers for you. Needs a free Anthropic API key from console.anthropic.com - paste it below (saved only on this device, never shared).</div>
     <div style="display:flex;gap:8px">
       <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="flex:1;font-size:13px;padding:10px 12px" oninput="onApiKeyInput()">
       <button class="btn btn-sm" onclick="saveApiKey()" style="white-space:nowrap;width:auto">Save</button>
@@ -313,6 +339,8 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
     <div><div class="quote-text">Your diet is a bank account. Good food choices are good investments - every meal is a vote for the body you want.</div><div class="quote-attr">- Bethenny Frankel</div></div>
   </div>
   <div class="macro-grid" id="macro-cards"></div>
+  <div class="section-title">Today's diet score</div>
+  <div class="card" id="diet-score-card" style="margin-bottom:16px"></div>
   <div class="card" style="margin-bottom:16px">
     <div id="prog-bars"></div>
   </div>
@@ -336,11 +364,11 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
   <div class="section-title">Log a meal</div>
   <div class="card card-sm" style="margin-bottom:16px">
 
-    <div id="camera-btn-row" style="display:none;margin-bottom:10px">
-      <label for="photo-input" style="display:flex;width:100%;background:var(--accent3);border:1.5px dashed var(--accent);border-radius:var(--r);padding:14px;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--accent);font-size:14px;font-weight:600;box-sizing:border-box">
+    <div id="camera-btn-row" style="margin-bottom:10px">
+      <button type="button" onclick="onScanPhotoClick()" style="display:flex;width:100%;background:var(--accent3);border:1.5px dashed var(--accent);border-radius:var(--r);padding:14px;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--accent);font-size:14px;font-weight:600;box-sizing:border-box">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Scan food photo
-      </label>
+        Snap nutrition label or food
+      </button>
       <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;position:absolute" onchange="handlePhoto(event)">
     </div>
 
@@ -352,7 +380,7 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
     </div>
 
     <div id="scan-status" style="display:none;text-align:center;padding:14px;color:var(--accent);font-size:14px;font-weight:500">
-      <div style="margin-bottom:6px">Analyzing your food...</div>
+      <div style="margin-bottom:6px">Reading the label...</div>
       <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div>
     </div>
 
@@ -372,20 +400,20 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
     </div>
     <div id="macro-preview" style="display:none;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div id="macro-preview-label" style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600">Detected macros - tap to edit</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <input type="text" id="meal-cal-input" placeholder="Calories" inputmode="decimal" style="font-size:13px;padding:8px 10px">
-        <input type="text" id="meal-pro-input" placeholder="Protein (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
-        <input type="text" id="meal-carb-input" placeholder="Carbs (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
-        <input type="text" id="meal-fat-input" placeholder="Fat (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="macro-cell"><div class="macro-input-label cal">Calories</div><input type="text" id="meal-cal-input" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
+        <div class="macro-cell"><div class="macro-input-label pro">Protein (g)</div><input type="text" id="meal-pro-input" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
+        <div class="macro-cell"><div class="macro-input-label carb">Carbs (g)</div><input type="text" id="meal-carb-input" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
+        <div class="macro-cell"><div class="macro-input-label fat">Fat (g)</div><input type="text" id="meal-fat-input" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
       </div>
     </div>
     <div id="macro-fields-manual" style="display:none;margin-bottom:8px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600">Enter macros manually</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <input type="text" id="meal-cal-input-m" placeholder="Calories" inputmode="decimal" style="font-size:13px;padding:8px 10px">
-        <input type="text" id="meal-pro-input-m" placeholder="Protein (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
-        <input type="text" id="meal-carb-input-m" placeholder="Carbs (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
-        <input type="text" id="meal-fat-input-m" placeholder="Fat (g)" inputmode="decimal" style="font-size:13px;padding:8px 10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="macro-cell"><div class="macro-input-label cal">Calories</div><input type="text" id="meal-cal-input-m" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
+        <div class="macro-cell"><div class="macro-input-label pro">Protein (g)</div><input type="text" id="meal-pro-input-m" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
+        <div class="macro-cell"><div class="macro-input-label carb">Carbs (g)</div><input type="text" id="meal-carb-input-m" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
+        <div class="macro-cell"><div class="macro-input-label fat">Fat (g)</div><input type="text" id="meal-fat-input-m" placeholder="0" inputmode="decimal" style="font-size:14px;padding:8px 10px"></div>
       </div>
     </div>
     <button class="btn" onclick="addMeal()" style="margin-bottom:0">Add to log</button>
@@ -1893,6 +1921,131 @@ function changeQty(delta){
 }
 
 // ----- NUTRITION -----
+// ----- DIET SCORE -----
+// Each food group maps to rough per-serving nutrient contributions. We don't have
+// lab-exact vitamin data, so this estimates diet QUALITY from food groups + macros.
+const DIET_GROUPS=[
+  {key:'leafy greens', kw:['spinach','kale','arugula','romaine','lettuce','swiss chard','collard','mixed greens','bok choy','watercress'], produce:1, whole:1, n:{fiber:2,vitA:1.5,vitC:1,iron:1,calcium:0.5,potassium:0.5}},
+  {key:'vegetables', kw:['broccoli','cauliflower','carrot','bell pepper','pepper','tomato','cucumber','zucchini','asparagus','green bean','brussels','celery','mushroom','onion','butternut','acorn squash','spaghetti squash','yellow squash','beet','eggplant','snap pea','cabbage','radish','artichoke','okra','leek','turnip','parsnip','fennel','vegetable','peas'], produce:1, whole:1, n:{fiber:2,vitA:1,vitC:1.5,potassium:0.7}},
+  {key:'fruit', kw:['apple','banana','blueberr','strawberr','raspberr','blackberr','berries','orange','grapefruit','grape','mango','pineapple','watermelon','melon','cantaloupe','honeydew','peach','pear','kiwi','cherry','plum','apricot','fruit','pomegran','papaya','guava','clementine','date','raisin','fig','dragon fruit','lychee','avocado'], produce:1, whole:1, n:{fiber:1.5,vitC:2,potassium:0.8,vitA:0.5}},
+  {key:'legumes', kw:['black beans','kidney beans','pinto','chickpea','lentil','edamame','white beans','navy beans','lima bean','black-eyed','refried','hummus','soybean','beans'], produce:0.5, whole:1, n:{fiber:5,iron:1.5,potassium:1,calcium:0.5}},
+  {key:'soy', kw:['tofu','tempeh','seitan','soy milk'], whole:1, n:{fiber:1,iron:1,calcium:1}},
+  {key:'nuts & seeds', kw:['almond','walnut','cashew','peanut','pistachio','pecan','macadamia','brazil nut','mixed nuts','sunflower seed','pumpkin seed','chia','flax','hemp seed','sesame','tahini','nut butter'], whole:1, n:{fiber:1.5,omega3:1,healthyfat:1,iron:0.5}},
+  {key:'fish & seafood', kw:['salmon','tuna','tilapia','cod','halibut','mahi','sardine','trout','mackerel','shrimp','crab','lobster','scallop','clam','oyster','mussel','anchov','herring','catfish','sea bass','squid','octopus','fish'], whole:1, n:{omega3:2,vitA:0.3}},
+  {key:'whole grains', kw:['oatmeal','oats','brown rice','quinoa','whole wheat','whole grain','barley','farro','bulgur','buckwheat','ezekiel','wild rice','millet','steel cut','amaranth'], whole:1, n:{fiber:3,iron:0.5,potassium:0.3}},
+  {key:'dairy', kw:['milk','yogurt','cottage cheese','cheese','cheddar','mozzarella','parmesan','ricotta','kefir','skyr','cream cheese','feta','swiss','gouda','provolone','paneer'], n:{calcium:2,vitA:0.3}},
+  {key:'eggs', kw:['egg'], whole:1, n:{vitA:0.3,iron:0.3}},
+  {key:'poultry', kw:['chicken','turkey','duck'], whole:1, n:{iron:0.3}},
+  {key:'red meat', kw:['beef','steak','pork','bacon','ham','lamb','bison','sausage','chorizo','ribeye','sirloin','brisket','venison','carnitas','carne','birria','meatball','meatloaf'], whole:0.5, n:{iron:1.5}},
+  {key:'healthy fats', kw:['olive oil','avocado oil','coconut oil'], whole:1, n:{healthyfat:1}},
+  {key:'sweets', kw:['candy','chocolate','cookie','cake','donut','ice cream','gummy','skittles','m&m','soda','syrup','brownie','pastry','oreo','swedish fish','sour patch','honey','jello','frosting'], processed:1, n:{}},
+  {key:'fast food', kw:['burger','pizza','fries','nugget','taco bell','mcdonald','fried','hot dog','nacho','onion ring','mozzarella stick'], processed:1, n:{}},
+  {key:'refined grains', kw:['white bread','white rice','bagel','pasta','cracker','tortilla','pretzel','cereal','pancake','waffle','muffin','biscuit','chips','popcorn','ramen','noodle','croissant'], processed:0.5, n:{}},
+];
+const NUTRIENT_TARGETS={fiber:28,vitC:3,vitA:3,calcium:3,iron:3,potassium:4,omega3:2,healthyfat:2};
+const NUTRIENT_NAMES={fiber:'Fiber',vitC:'Vit C',vitA:'Vit A',calcium:'Calcium',iron:'Iron',potassium:'Potassium',omega3:'Omega-3',healthyfat:'Healthy fats'};
+
+function classifyDietFood(name){
+  const q=(name||'').toLowerCase();
+  for(const g of DIET_GROUPS){
+    if(g.kw.some(k=>q.includes(k)))return g;
+  }
+  return null;
+}
+
+function computeDietScore(){
+  const meals=state.nutrition.meals||[];
+  const t=state.nutrition.totals;
+  const buckets={fiber:0,vitC:0,vitA:0,calcium:0,iron:0,potassium:0,omega3:0,healthyfat:0};
+  let produce=0,whole=0,processed=0;
+  const groups=new Set();
+  for(const m of meals){
+    const g=classifyDietFood(m.name);
+    if(!g)continue;
+    for(const k in g.n)buckets[k]+=g.n[k];
+    produce+=g.produce||0;
+    whole+=g.whole||0;
+    processed+=g.processed||0;
+    if(!g.processed)groups.add(g.key);
+  }
+  // component scores 0..1
+  const comp={};
+  comp.protein=Math.min(1,t.pro/TARGETS.pro);
+  const cr=t.cal/TARGETS.cal;
+  comp.calories=t.cal===0?0:(cr<0.5?cr*1.5:cr<=1.1?1:Math.max(0,1-(cr-1.1)*2));
+  comp.produce=Math.min(1,produce/5);
+  comp.fiber=Math.min(1,buckets.fiber/NUTRIENT_TARGETS.fiber);
+  comp.variety=Math.min(1,groups.size/6);
+  comp.wholefoods=(whole+processed)===0?0:whole/(whole+processed);
+  const weights={protein:20,calories:15,produce:25,fiber:20,variety:10,wholefoods:10};
+  let score=0;for(const k in weights)score+=weights[k]*comp[k];
+  score=Math.round(score);
+  // nutrient status
+  const nut={};
+  for(const k in NUTRIENT_TARGETS){
+    const ratio=buckets[k]/NUTRIENT_TARGETS[k];
+    nut[k]={ratio,status:ratio>=0.75?'good':ratio>=0.4?'ok':'low'};
+  }
+  return {score,comp,nut,produce,fiber:buckets.fiber,variety:groups.size,mealCount:meals.length};
+}
+
+function renderDietScore(){
+  const card=document.getElementById('diet-score-card');
+  if(!card)return;
+  const meals=state.nutrition.meals||[];
+  if(!meals.length){
+    card.innerHTML='<div class="score-empty">Log your meals and a daily diet score builds here - it climbs as you add variety, produce, fiber and protein through the day.</div>';
+    return;
+  }
+  const d=computeDietScore();
+  const s=d.score;
+  const color=s>=70?'#16a34a':s>=50?'#ea580c':'#dc2626';
+  const grade=s>=85?'A':s>=70?'B':s>=55?'C':s>=40?'D':'E';
+  const r=36,circ=2*Math.PI*r,off=circ*(1-s/100);
+  // summary
+  const strengths=[];
+  if(d.comp.protein>=0.75)strengths.push('protein');
+  if(d.comp.produce>=0.7)strengths.push('produce');
+  if(d.nut.vitC.status==='good')strengths.push('vitamin C');
+  if(d.nut.calcium.status==='good')strengths.push('calcium');
+  if(d.nut.omega3.status==='good')strengths.push('healthy fats');
+  if(d.comp.fiber>=0.75)strengths.push('fiber');
+  const gaps=[];
+  if(d.comp.produce<0.5)gaps.push('vegetables & fruit');
+  if(d.comp.fiber<0.5)gaps.push('fiber');
+  if(d.nut.iron.status==='low')gaps.push('iron');
+  if(d.nut.calcium.status==='low')gaps.push('calcium');
+  if(d.comp.protein<0.5)gaps.push('protein');
+  if(d.comp.variety<0.5)gaps.push('variety');
+  let summary='';
+  if(strengths.length)summary+='Strong on '+strengths.slice(0,2).join(' and ')+'. ';
+  if(gaps.length)summary+='Add more '+gaps.slice(0,2).join(' and ')+' to climb higher.';
+  else if(strengths.length)summary+='Well-rounded day - keep it up!';
+  if(!summary)summary='Keep logging to round out your day.';
+  // bars
+  const bars=[
+    {label:'Produce',val:d.produce.toFixed(d.produce%1?1:0)+' / 5 servings',pct:Math.min(100,d.produce/5*100),cls:'protein'},
+    {label:'Fiber',val:Math.round(d.fiber)+' / 28 g',pct:Math.min(100,d.fiber/28*100),cls:'carbs'},
+    {label:'Protein',val:Math.round(state.nutrition.totals.pro)+' / '+TARGETS.pro+' g',pct:Math.min(100,state.nutrition.totals.pro/TARGETS.pro*100),cls:'calories'},
+    {label:'Food variety',val:d.variety+' groups',pct:Math.min(100,d.variety/6*100),cls:'fat'},
+  ];
+  const barsHtml=bars.map(b=>`<div><div class="score-bar-label"><span>${b.label}</span><span>${b.val}</span></div><div class="prog-bar"><div class="prog-fill ${b.cls}" style="width:${b.pct}%"></div></div></div>`).join('');
+  const chips=Object.keys(NUTRIENT_NAMES).map(k=>`<span class="nutrient-chip ${d.nut[k].status}">${NUTRIENT_NAMES[k]}</span>`).join('');
+  card.innerHTML=`
+    <div class="score-top">
+      <div class="score-ring">
+        <svg width="84" height="84" viewBox="0 0 84 84">
+          <circle cx="42" cy="42" r="36" fill="none" stroke="var(--bg4)" stroke-width="7"/>
+          <circle cx="42" cy="42" r="36" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 42 42)"/>
+        </svg>
+        <div class="score-ring-num"><div class="score-ring-val" style="color:${color}">${s}</div><div class="score-ring-grade">Grade ${grade}</div></div>
+      </div>
+      <div class="score-summary">${summary}</div>
+    </div>
+    <div class="score-bars">${barsHtml}</div>
+    <div class="nutrient-chips">${chips}</div>`;
+}
+
 function renderNutrition(){
   document.getElementById('nut-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const t=state.nutrition.totals;
@@ -1916,6 +2069,7 @@ function renderNutrition(){
     </div>`;
   }).join('');
 
+  renderDietScore();
   renderMealLog();
   renderRecents();
 }
@@ -2170,6 +2324,12 @@ function saveApiKey(){
 }
 
 // ----- PHOTO SCANNING -----
+function onScanPhotoClick(){
+  const key=localStorage.getItem('anthropic_api_key');
+  if(!key){showToast('Turn on photo scanning in settings (gear icon) first');toggleSettings();return;}
+  document.getElementById('photo-input').click();
+}
+
 async function handlePhoto(event){
   const file=event.target.files[0];
   if(!file)return;
@@ -2193,7 +2353,7 @@ async function handlePhoto(event){
         max_tokens:256,
         messages:[{role:'user',content:[
           {type:'image',source:{type:'base64',media_type:mime,data:b64}},
-          {type:'text',text:'You are a nutrition assistant. Look at this food photo and estimate the macros. Reply ONLY with valid JSON, no markdown, no explanation. Format: {"name":"brief food description under 40 chars","cal":400,"pro":30,"carb":35,"fat":12}. Estimate for a typical single serving of what you see.'}
+          {type:'text',text:'You read nutrition info from an image. The image is EITHER a Nutrition Facts label OR a photo of food.\n- If it is a Nutrition Facts label: read the numbers EXACTLY as printed for ONE serving (the "Amount per serving" / "per serving" column, NOT per container). Report calories, protein, total carbohydrate, and total fat in grams.\n- If it is a plate or item of food with no label: estimate the macros for one typical serving.\nReply ONLY with valid JSON, no markdown, no explanation. Format: {"name":"short food name under 40 chars","cal":150,"pro":2,"carb":22,"fat":6}'}
         ]}]
       })
     });
