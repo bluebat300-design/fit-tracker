@@ -385,7 +385,7 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
     </div>
 
     <div style="position:relative;margin-bottom:8px">
-      <input type="text" id="meal-name-input" placeholder='Try "3 eggs" or "1 cup oats"' oninput="onFoodInput()" onkeydown="onFoodKey(event)" autocomplete="off">
+      <input type="text" id="meal-name-input" placeholder='Try "3 eggs" or "dr pepper"' oninput="onFoodInput()" onkeydown="onFoodKey(event)" autocomplete="off">
       <div id="food-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--accent);border-radius:var(--r);box-shadow:0 4px 20px rgba(234,88,12,.15);z-index:50;overflow:hidden;max-height:220px;overflow-y:auto"></div>
     </div>
     <div id="qty-strip" class="qty-strip">
@@ -1700,20 +1700,34 @@ function logAllDraft(){
 }
 
 let dropdownIdx=-1;
+function onlineRowHtml(val){
+  return `<div class="food-suggestion" onclick="searchOnline()" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;background:var(--accent3)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <span style="font-size:13px;font-weight:600;color:var(--accent)">Search groceries online for "${val.trim()}"</span>
+  </div>`;
+}
 function onFoodInput(){
   const val=document.getElementById('meal-name-input').value;
   const results=lookupFood(val);
   const dd=document.getElementById('food-dropdown');
   dropdownIdx=-1;
-  if(!results.length||!val.trim()){
+  if(!val.trim()){
     dd.style.display='none';
-    // Show manual fields if they typed something but no match
-    if(val.trim()&&!results.length){
+    document.getElementById('macro-fields-manual').style.display='none';
+    document.getElementById('macro-preview').style.display='none';
+    return;
+  }
+  if(!results.length){
+    // No local match: offer online grocery search + manual fields
+    document.getElementById('macro-preview').style.display='none';
+    if(val.trim().length>=3){
+      dd.style.display='block';
+      dd.innerHTML=onlineRowHtml(val);
+      dd._results=[];
       document.getElementById('macro-fields-manual').style.display='block';
-      document.getElementById('macro-preview').style.display='none';
-    } else {
-      document.getElementById('macro-fields-manual').style.display='none';
-      document.getElementById('macro-preview').style.display='none';
+    }else{
+      dd.style.display='none';
+      document.getElementById('macro-fields-manual').style.display='block';
     }
     return;
   }
@@ -1726,9 +1740,89 @@ function onFoodInput(){
         <div style="font-size:12px;color:var(--text2);margin-top:1px">${r.cal} cal . ${r.pro}g P . ${r.carb}g C . ${r.fat}g F</div>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-left:8px;white-space:nowrap">per ${r.unit}</div>
-    </div>`).join('');
+    </div>`).join('')+(val.trim().length>=3?onlineRowHtml(val):'');
   // store results for selection
   dd._results=results;
+}
+
+// ----- ONLINE GROCERY SEARCH (Open Food Facts + USDA, millions of branded products) -----
+const USDA_KEY='DEMO_KEY';
+function r1(x){return Math.round((x||0)*10)/10;}
+
+function offToFood(p){
+  const n=p.nutriments||{};
+  const brand=(p.brands||'').split(',')[0].trim();
+  let name=((brand&&!(p.product_name||'').toLowerCase().includes(brand.toLowerCase())?brand+' ':'')+(p.product_name||'')).toLowerCase().trim();
+  if(!name)return null;
+  const hasServ=n['energy-kcal_serving']!=null||n['proteins_serving']!=null;
+  const suf=hasServ?'_serving':'_100g';
+  let cal=n['energy-kcal'+suf];
+  if(cal==null){const kj=n['energy-kj'+suf]??n['energy'+suf];if(kj!=null)cal=kj/4.184;}
+  if(cal==null&&n['proteins'+suf]==null)return null;
+  return [name,hasServ?(p.serving_size||'serving'):'100g',Math.round(cal||0),r1(n['proteins'+suf]),r1(n['carbohydrates'+suf]),r1(n['fat'+suf])];
+}
+
+function usdaToFood(f){
+  const brand=(f.brandName||f.brandOwner||'').trim();
+  let name=(brand+' '+(f.description||'')).toLowerCase().trim();
+  if(!name)return null;
+  const gn={};
+  (f.foodNutrients||[]).forEach(n=>{
+    if(n.nutrientName==='Energy'&&(n.unitName||'').toUpperCase()!=='KCAL')return;
+    gn[n.nutrientName]=n.value;
+  });
+  let cal=gn['Energy'],pro=gn['Protein'],carb=gn['Carbohydrate, by difference'],fat=gn['Total lipid (fat)'];
+  if(cal==null&&pro==null)return null;
+  let unit='100g';
+  // USDA search values are per 100g/100ml; convert to the label serving when known
+  if(f.servingSize&&/^(g|grm|ml|mlt)$/i.test(f.servingSizeUnit||'')){
+    const k=f.servingSize/100;
+    cal=(cal||0)*k;pro=(pro||0)*k;carb=(carb||0)*k;fat=(fat||0)*k;
+    unit=(f.householdServingFullText||'').trim()||Math.round(f.servingSize)+(/ml/i.test(f.servingSizeUnit)?' ml':' g');
+  }
+  return [name,unit,Math.round(cal||0),r1(pro),r1(carb),r1(fat)];
+}
+
+async function searchOnline(){
+  const raw=document.getElementById('meal-name-input').value.trim();
+  if(!raw)return;
+  const {name}=parseFood(raw);
+  const q=encodeURIComponent((name||raw).trim());
+  const dd=document.getElementById('food-dropdown');
+  dd.style.display='block';
+  dd.innerHTML='<div style="padding:16px;text-align:center;color:var(--text2);font-size:13px">Searching millions of groceries...</div>';
+  const usdaP=fetch('https://api.nal.usda.gov/fdc/v1/foods/search?api_key='+USDA_KEY+'&query='+q+'&dataType=Branded&pageSize=8')
+    .then(r=>r.json()).then(d=>(d.foods||[]).map(usdaToFood).filter(Boolean)).catch(()=>[]);
+  const offP=fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+q+'&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,nutriments,serving_size')
+    .then(r=>r.json()).then(d=>(d.products||[]).map(offToFood).filter(Boolean)).catch(()=>[]);
+  const [usda,off]=await Promise.all([usdaP,offP]);
+  const seen=new Set();
+  const items=usda.concat(off).filter(f=>{const k=f[0];if(seen.has(k))return false;seen.add(k);return true;}).slice(0,12);
+  if(!items.length){
+    dd.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Nothing found - try fewer words (e.g. just "dr pepper")</div>';
+    setTimeout(()=>{dd.style.display='none';},2500);
+    return;
+  }
+  dd._online=items;
+  dd.innerHTML='<div style="padding:8px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg3)">Online results - tap to pick</div>'+
+    items.map((f,i)=>`
+    <div class="food-suggestion" onclick="pickOnline(${i})" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+      <div style="min-width:0">
+        <div style="font-size:14px;font-weight:500;color:var(--text);text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f[0]}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:1px">${f[2]} cal . ${f[3]}g P . ${f[4]}g C . ${f[5]}g F</div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-left:8px;white-space:nowrap;flex-shrink:0">per ${f[1]}</div>
+    </div>`).join('');
+}
+
+function pickOnline(i){
+  const dd=document.getElementById('food-dropdown');
+  const f=dd._online&&dd._online[i];
+  if(!f)return;
+  saveCustomFood(f); // remember it so it shows in normal search next time
+  document.getElementById('macro-fields-manual').style.display='none';
+  pickFood(f);
+  showToast('Added to your foods!');
 }
 
 function onFoodKey(e){
@@ -1842,6 +1936,35 @@ function lookupBarcodeManual(){
   onBarcodeDetected(code);
 }
 
+function showScannedReview(f){
+  const[name,unitLabel,cal,pro,carb,fat]=f;
+  saveCustomFood(f);
+  closeBarcodeScanner();
+  // Route into the editable review so the user can verify vs the label before logging
+  _pickedFood=null;
+  document.getElementById('qty-strip').style.display='none';
+  document.getElementById('food-dropdown').style.display='none';
+  document.getElementById('macro-fields-manual').style.display='none';
+  document.getElementById('meal-name-input').value=name;
+  document.getElementById('meal-cal-input').value=cal;
+  document.getElementById('meal-pro-input').value=pro;
+  document.getElementById('meal-carb-input').value=carb;
+  document.getElementById('meal-fat-input').value=fat;
+  document.getElementById('macro-preview-label').textContent='Scanned "'+name+'" (per '+unitLabel+') - check vs the bag & edit if needed, then Add to log';
+  document.getElementById('macro-preview').style.display='block';
+  document.getElementById('macro-preview').scrollIntoView({behavior:'smooth',block:'center'});
+  showToast('Scanned - double-check the numbers');
+}
+
+// Second-chance lookup: USDA branded database (~380k US products, label-accurate)
+async function usdaBarcodeLookup(code){
+  const stripped=code.replace(/^0+/,'');
+  const res=await fetch('https://api.nal.usda.gov/fdc/v1/foods/search?api_key='+USDA_KEY+'&query='+code+'&dataType=Branded&pageSize=5');
+  const data=await res.json();
+  const hit=(data.foods||[]).find(f=>(f.gtinUpc||'').replace(/^0+/,'')===stripped)||(data.foods||[])[0];
+  return hit?usdaToFood(hit):null;
+}
+
 async function onBarcodeDetected(code){
   if(_barcodeProcessing)return;
   _barcodeProcessing=true;
@@ -1851,7 +1974,12 @@ async function onBarcodeDetected(code){
     const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json');
     const data=await res.json();
     if(data.status!==1||!data.product){
-      document.getElementById('barcode-status').textContent='Not found for '+code+' - double-check the number below and try again';
+      // Not in Open Food Facts - try the USDA database before giving up
+      document.getElementById('barcode-status').textContent='Checking USDA database for '+code+'...';
+      let uf=null;
+      try{uf=await usdaBarcodeLookup(code);}catch(e){console.error(e);}
+      if(uf){showScannedReview(uf);return;}
+      document.getElementById('barcode-status').textContent='Not found for '+code+' - double-check the number below, or search it by name in the food box';
       _barcodeProcessing=false;
       return;
     }
@@ -1873,22 +2001,14 @@ async function onBarcodeDetected(code){
     const carb=Math.round((num(n['carbohydrates'+suf])||0)*10)/10;
     const fat=Math.round((num(n['fat'+suf])||0)*10)/10;
     const unitLabel=hasServing?(p.serving_size||'serving'):'100g';
-    saveCustomFood([name,unitLabel,cal,pro,carb,fat]);
-    closeBarcodeScanner();
-    // Route into the editable review so the user can verify vs the label before logging
-    _pickedFood=null;
-    document.getElementById('qty-strip').style.display='none';
-    document.getElementById('food-dropdown').style.display='none';
-    document.getElementById('macro-fields-manual').style.display='none';
-    document.getElementById('meal-name-input').value=name;
-    document.getElementById('meal-cal-input').value=cal;
-    document.getElementById('meal-pro-input').value=pro;
-    document.getElementById('meal-carb-input').value=carb;
-    document.getElementById('meal-fat-input').value=fat;
-    document.getElementById('macro-preview-label').textContent='Scanned "'+name+'" (per '+unitLabel+') - check vs the bag & edit if needed, then Add to log';
-    document.getElementById('macro-preview').style.display='block';
-    document.getElementById('macro-preview').scrollIntoView({behavior:'smooth',block:'center'});
-    showToast('Scanned - double-check the numbers');
+    if(cal===0&&pro===0&&carb===0&&fat===0){
+      // Entry exists but has no nutrition data - USDA is a better bet
+      document.getElementById('barcode-status').textContent='Entry has no nutrition data - checking USDA...';
+      let uf=null;
+      try{uf=await usdaBarcodeLookup(code);}catch(e){console.error(e);}
+      if(uf){showScannedReview(uf);return;}
+    }
+    showScannedReview([name,unitLabel,cal,pro,carb,fat]);
   }catch(e){
     document.getElementById('barcode-status').textContent='Lookup failed - check your connection and try again';
     console.error(e);
