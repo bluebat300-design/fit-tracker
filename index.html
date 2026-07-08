@@ -226,6 +226,8 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .recent-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .recent-chip:active{border-color:var(--accent)}
 .recent-chip .rc-macro{font-size:11px;color:var(--text3)}
+.recent-chip .rc-remove{font-size:16px;line-height:1;color:var(--text3);padding:2px 2px 2px 6px;margin:-2px -4px -2px 0;border-left:1px solid var(--border)}
+.recent-chip .rc-remove:active{color:var(--red)}
 
 /* Diet score */
 .score-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
@@ -244,6 +246,21 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .nutrient-chip.ok{background:#fff7ed;color:#c2410c}
 .nutrient-chip.low{background:#fee2e2;color:#dc2626}
 .score-empty{text-align:center;padding:20px;color:var(--text3);font-size:14px;line-height:1.5}
+
+/* Nutrient food guide (accordion) */
+.nutri-acc{background:#fff;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.nutri-acc-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;gap:8px}
+.nutri-acc-title{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nutri-acc-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.nutri-acc-status.good{background:#dcfce7;color:#15803d}
+.nutri-acc-status.ok{background:#fff7ed;color:#c2410c}
+.nutri-acc-status.low{background:#fee2e2;color:#dc2626}
+.nutri-acc-chev{width:16px;height:16px;stroke:var(--text3);stroke-width:2.5;fill:none;flex-shrink:0;transition:transform .2s}
+.nutri-acc.open .nutri-acc-chev{transform:rotate(180deg)}
+.nutri-acc-body{display:none;padding:0 14px 12px;flex-wrap:wrap;gap:6px}
+.nutri-acc.open .nutri-acc-body{display:flex}
+.nutri-food{font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 11px;border-radius:16px;cursor:pointer}
+.nutri-food:active{border-color:var(--accent);background:var(--accent3)}
 
 /* Macro input labels */
 .macro-cell{display:flex;flex-direction:column}
@@ -422,6 +439,10 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
   <div class="card card-sm" id="meal-log-list">
     <div style="text-align:center;padding:16px;color:var(--text3);font-size:14px">No meals logged yet</div>
   </div>
+
+  <div class="section-title" style="margin-top:20px">Foods to boost your score</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">Tap a nutrient to see foods rich in it. The ones your day is low on show up first. Tap any food to log it.</div>
+  <div id="nutrient-guide"></div>
 </div>
 
 <div id="page-meals" class="page">
@@ -1791,16 +1812,19 @@ async function searchOnline(){
   const dd=document.getElementById('food-dropdown');
   dd.style.display='block';
   dd.innerHTML='<div style="padding:16px;text-align:center;color:var(--text2);font-size:13px">Searching millions of groceries...</div>';
-  const usdaP=fetch('https://api.nal.usda.gov/fdc/v1/foods/search?api_key='+USDA_KEY+'&query='+q+'&dataType=Branded&pageSize=8')
-    .then(r=>r.json()).then(d=>(d.foods||[]).map(usdaToFood).filter(Boolean)).catch(()=>[]);
-  const offP=fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+q+'&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,nutriments,serving_size')
-    .then(r=>r.json()).then(d=>(d.products||[]).map(offToFood).filter(Boolean)).catch(()=>[]);
+  let errored=0;
+  const usdaP=fetch('https://api.nal.usda.gov/fdc/v1/foods/search?api_key='+USDA_KEY+'&query='+q+'&dataType=Branded&pageSize=10')
+    .then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>(d.foods||[]).map(usdaToFood).filter(Boolean)).catch(()=>{errored++;return [];});
+  const offP=fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms='+q+'&search_simple=1&action=process&json=1&page_size=10&fields=product_name,brands,nutriments,serving_size')
+    .then(r=>{if(!r.ok)throw 0;return r.json();}).then(d=>(d.products||[]).map(offToFood).filter(Boolean)).catch(()=>{errored++;return [];});
   const [usda,off]=await Promise.all([usdaP,offP]);
   const seen=new Set();
-  const items=usda.concat(off).filter(f=>{const k=f[0];if(seen.has(k))return false;seen.add(k);return true;}).slice(0,12);
+  const items=usda.concat(off).filter(f=>{const k=f[0];if(seen.has(k))return false;seen.add(k);return true;}).slice(0,14);
   if(!items.length){
-    dd.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Nothing found - try fewer words (e.g. just "dr pepper")</div>';
-    setTimeout(()=>{dd.style.display='none';},2500);
+    const msg=errored>=2
+      ? 'Could not reach the food databases right now. Check your internet and tap search again.'
+      : 'No matches. Try simpler words - just the brand (e.g. <b>dr pepper</b>). Tap search again to retry.';
+    dd.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6">'+msg+'</div>';
     return;
   }
   dd._online=items;
@@ -1878,13 +1902,21 @@ function renderRecents(){
   if(!recents.length){card.style.display='none';title.style.display='none';return;}
   card.style.display='block';
   title.style.display='block';
-  list.innerHTML=recents.map((r,i)=>`<div class="recent-chip" onclick="useRecent(${i})"><span>${r.name}</span><span class="rc-macro">${r.cal} cal</span></div>`).join('');
+  list.innerHTML=recents.map((r,i)=>`<div class="recent-chip" onclick="useRecent(${i})"><span>${r.name}</span><span class="rc-macro">${r.cal} cal</span><span class="rc-remove" onclick="removeRecent(event,${i})" aria-label="Remove ${r.name}">&times;</span></div>`).join('');
 }
 
 function useRecent(idx){
   const r=getRecents()[idx];
   if(!r)return;
   pickFood([r.name,r.unit,r.cal,r.pro,r.carb,r.fat]);
+}
+
+function removeRecent(e,idx){
+  e.stopPropagation(); // don't trigger the chip's log action
+  const recents=getRecents();
+  recents.splice(idx,1);
+  saveRecents(recents);
+  renderRecents();
 }
 
 // ----- BARCODE SCANNER -----
@@ -2166,6 +2198,61 @@ function renderDietScore(){
     <div class="nutrient-chips">${chips}</div>`;
 }
 
+// ----- NUTRIENT FOOD GUIDE -----
+const NUTRIENT_GUIDE_NAMES={protein:'Protein',fiber:'Fiber',vitC:'Vitamin C',vitA:'Vitamin A',calcium:'Calcium',iron:'Iron',potassium:'Potassium',omega3:'Omega-3',healthyfat:'Healthy fats'};
+const NUTRIENT_FOODS={
+  protein:['chicken breast','greek yogurt','eggs','whey protein powder','salmon','ground turkey','cottage cheese','lentils','tofu','tuna canned in water','edamame'],
+  fiber:['black beans','lentils','chickpeas','raspberries','avocado','oats rolled','broccoli','chia seeds','almonds','sweet potato','pear','edamame'],
+  vitC:['orange','bell pepper red','strawberries','broccoli','kiwi','pineapple','grapefruit','brussels sprouts','mango','kale','cauliflower'],
+  vitA:['sweet potato','carrots','spinach','kale','butternut squash','cantaloupe','bell pepper red','egg yolk','mango','broccoli'],
+  calcium:['greek yogurt','whole milk','cheddar cheese','cottage cheese','kale','almonds','tofu firm','sardines canned','chia seeds','broccoli'],
+  iron:['ground beef 93/7','lentils','spinach cooked','chickpeas','tofu firm','pumpkin seeds','black beans','chicken thigh','sardines canned','edamame'],
+  potassium:['banana','potato','sweet potato','avocado','white beans','spinach cooked','salmon','greek yogurt','cantaloupe','lentils'],
+  omega3:['salmon','sardines canned','walnuts','chia seeds','flax seeds','mackerel','hemp seeds','tuna steak','edamame'],
+  healthyfat:['avocado','olive oil','almonds','walnuts','peanut butter','chia seeds','salmon','pumpkin seeds','dark chocolate','cashews'],
+};
+let _openAcc=new Set();
+function toggleAcc(k){
+  const el=document.getElementById('acc-'+k);
+  if(!el)return;
+  if(el.classList.toggle('open'))_openAcc.add(k); else _openAcc.delete(k);
+}
+function suggestFood(name){
+  const inp=document.getElementById('meal-name-input');
+  inp.value=name;
+  onFoodInput();
+  inp.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderNutrientGuide(){
+  const wrap=document.getElementById('nutrient-guide');
+  if(!wrap)return;
+  const hasMeals=(state.nutrition.meals||[]).length>0;
+  const d=hasMeals?computeDietScore():null;
+  const statusFor=k=>{
+    if(!d)return null;
+    if(k==='protein')return d.comp.protein>=0.75?'good':d.comp.protein>=0.4?'ok':'low';
+    return d.nut[k]?d.nut[k].status:null;
+  };
+  const labelFor=s=>s==='good'?'On track':s==='ok'?'Getting there':'Low';
+  const rank={low:0,ok:1,good:2};
+  const order=['protein','fiber','vitC','vitA','calcium','iron','potassium','omega3','healthyfat'];
+  let list=order.map(k=>({k,status:statusFor(k)}));
+  if(hasMeals)list.sort((a,b)=>rank[a.status]-rank[b.status]);
+  wrap.innerHTML=list.map(({k,status})=>{
+    const foods=NUTRIENT_FOODS[k]||[];
+    const badge=status?`<span class="nutri-acc-status ${status}">${labelFor(status)}</span>`:'';
+    const open=_openAcc.has(k)?' open':'';
+    const chips=foods.map(f=>`<span class="nutri-food" onclick="suggestFood('${f.replace(/'/g,"\\'")}')">${f}</span>`).join('');
+    return `<div class="nutri-acc${open}" id="acc-${k}">
+      <div class="nutri-acc-head" onclick="toggleAcc('${k}')">
+        <div class="nutri-acc-title">${NUTRIENT_GUIDE_NAMES[k]}${badge}</div>
+        <svg class="nutri-acc-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="nutri-acc-body">${chips}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderNutrition(){
   document.getElementById('nut-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
   const t=state.nutrition.totals;
@@ -2190,6 +2277,7 @@ function renderNutrition(){
   }).join('');
 
   renderDietScore();
+  renderNutrientGuide();
   renderMealLog();
   renderRecents();
 }
