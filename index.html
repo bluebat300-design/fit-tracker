@@ -308,6 +308,27 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .ex-last{font-size:11px;color:var(--text3);margin-top:3px}
 .ex-summary{font-size:12px;color:var(--green);margin-top:3px;font-weight:600}
 .ex-log-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--text2);font-size:16px;font-weight:600;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ex-swap-btn{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ex-swap-btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
+.ex-swapped-tag{font-size:11px;color:var(--accent);font-weight:700;margin-top:3px}
+.swap-panel{padding:4px 0 14px 38px;border-bottom:1px solid var(--border)}
+.swap-panel-title{font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px}
+.swap-opts{display:flex;flex-wrap:wrap;gap:6px}
+.swap-opt{font-size:13px;font-weight:500;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:16px;cursor:pointer}
+.swap-opt:active{border-color:var(--accent);background:var(--accent3)}
+.swap-opt.reset{background:#fff;border-style:dashed;color:var(--text2)}
+
+/* Streak card */
+.streak-card{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fcd9b0;border-radius:var(--card-r);padding:14px;margin-bottom:16px}
+.streak-big{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #fcd9b0}
+.streak-big-flame{font-size:34px;line-height:1}
+.streak-big-num{font-size:30px;font-weight:800;color:var(--accent);line-height:1}
+.streak-big-txt{font-size:13px;color:var(--text2);font-weight:600;margin-top:2px}
+.streak-row{display:flex;gap:8px}
+.streak-cell{flex:1;text-align:center;background:#fff;border:1px solid #fcd9b0;border-radius:var(--r);padding:9px 4px}
+.streak-cell-emoji{font-size:17px;line-height:1}
+.streak-cell-num{font-size:18px;font-weight:800;color:var(--text);margin-top:3px;line-height:1}
+.streak-cell-lbl{font-size:10px;color:var(--text3);font-weight:600;margin-top:2px}
 </style>
 </head>
 <body>
@@ -321,6 +342,7 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
     <div class="quote-mark">"</div>
     <div><div class="quote-text">The only bad workout is the one that didn't happen. Show up, put in the work, and the results will follow.</div><div class="quote-attr">- David Goggins</div></div>
   </div>
+  <div id="streak-card"></div>
   <div class="week-pills" id="week-pills"></div>
   <div class="day-tabs" id="day-tabs"></div>
   <div id="day-complete-banner" class="day-complete">
@@ -349,6 +371,20 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
       <button class="btn btn-sm" onclick="saveApiKey()" style="white-space:nowrap;width:auto">Save</button>
     </div>
     <div id="api-key-status" style="font-size:12px;margin-top:8px;color:var(--text3)"></div>
+
+    <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Backup &amp; Restore</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">Your logged data lives only on this phone. Back it up to a file (save it to Files or email it to yourself), and restore it anytime - even on a new phone.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="exportBackup()" style="flex:1;width:auto">Back up my data</button>
+        <label class="btn btn-sm btn-ghost" style="flex:1;width:auto;text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center">Restore file<input type="file" accept="application/json,.json,text/plain" onchange="restoreBackupFile(event)" style="display:none"></label>
+      </div>
+      <details style="margin-top:8px">
+        <summary style="font-size:12px;color:var(--text3);cursor:pointer">Advanced: copy or paste backup text</summary>
+        <textarea id="backup-text" placeholder="After Back up, your backup text appears here to copy. To restore, paste saved backup text here and tap below." style="margin-top:8px;min-height:70px;font-size:12px;width:100%"></textarea>
+        <button class="btn btn-sm btn-ghost" onclick="restoreBackupText()" style="margin-top:6px;width:100%">Restore from pasted text</button>
+      </details>
+    </div>
   </div>
 
   <div class="quote-banner">
@@ -708,6 +744,7 @@ let state={
   currentWeek:ls('wk_curweek',1),
   nutrition:ls('nut_'+todayStr,{meals:[],totals:{cal:0,pro:0,carb:0,fat:0}}),
   setLogs:ls('wk_sets',{}),
+  swaps:ls('ex_swaps',{}),
 };
 
 // ----- PAGE NAV -----
@@ -721,8 +758,151 @@ function showPage(name,btn){
   if(name==='sleep')renderSleep();
 }
 
+// ----- STREAKS -----
+function activityLog(){return ls('activity_log',{});}
+function dateKeyOffset(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().split('T')[0];}
+function isRestDate(key){return new Date(key+'T12:00:00').getDay()===0;} // Sunday = scheduled rest
+const STREAK_LABEL={food:'food',sleep:'sleep',workout:'workout'};
+
+function dayQualifies(type,day,key){
+  day=day||{};
+  if(type==='food')return !!day.food;
+  if(type==='sleep')return !!day.sleep;
+  if(type==='workout')return !!day.workout||isRestDate(key);
+  if(type==='all')return !!day.food&&!!day.sleep&&(!!day.workout||isRestDate(key));
+  return false;
+}
+
+function streakFor(type){
+  const log=activityLog();
+  // grace: if today isn't done yet, the streak is still alive counting back from yesterday
+  let i=dayQualifies(type,log[dateKeyOffset(0)],dateKeyOffset(0))?0:1;
+  let n=0;
+  for(;i<400;i++){
+    const key=dateKeyOffset(i);
+    if(dayQualifies(type,log[key],key))n++;else break;
+  }
+  return n;
+}
+
+function allThreeTodayDone(){
+  const log=activityLog();
+  return dayQualifies('all',log[todayStr],todayStr);
+}
+
+function markActivity(type){
+  const log=activityLog();
+  const today=log[todayStr]||{};
+  if(today[type])return; // already counted today
+  const wasAllThree=dayQualifies('all',today,todayStr);
+  today[type]=1;
+  log[todayStr]=today;
+  lss('activity_log',log);
+  // celebrate the individual streak (delayed so it follows the action's own toast)
+  const s=streakFor(type);
+  if(s>=2&&STREAK_LABEL[type])setTimeout(()=>showToast('🔥 '+s+'-day '+STREAK_LABEL[type]+' streak!'),1500);
+  // celebrate completing all three for the first time today
+  if(!wasAllThree&&dayQualifies('all',today,todayStr)){
+    const cs=streakFor('all');
+    setTimeout(()=>showToast('🌟 Perfect day! '+cs+'-day all-3 streak'),2900);
+  }
+  renderStreaks();
+}
+
+function renderStreaks(){
+  const card=document.getElementById('streak-card');
+  if(!card)return;
+  const all=streakFor('all'),w=streakFor('workout'),f=streakFor('food'),sl=streakFor('sleep');
+  card.className='streak-card';
+  card.innerHTML=`
+    <div class="streak-big">
+      <div class="streak-big-flame">${all>0?'🔥':'✨'}</div>
+      <div>
+        <div class="streak-big-num">${all} day${all!==1?'s':''}</div>
+        <div class="streak-big-txt">all-3 streak - workout, food & sleep together</div>
+      </div>
+    </div>
+    <div class="streak-row">
+      <div class="streak-cell"><div class="streak-cell-emoji">🏋️</div><div class="streak-cell-num">${w}</div><div class="streak-cell-lbl">Workout</div></div>
+      <div class="streak-cell"><div class="streak-cell-emoji">🍎</div><div class="streak-cell-num">${f}</div><div class="streak-cell-lbl">Food</div></div>
+      <div class="streak-cell"><div class="streak-cell-emoji">😴</div><div class="streak-cell-num">${sl}</div><div class="streak-cell-lbl">Sleep</div></div>
+    </div>`;
+}
+
+// One-time backfill so existing food/sleep history seeds the streaks
+function backfillActivity(){
+  if(ls('activity_backfilled',0))return;
+  const log=activityLog();
+  const mark=(key,type)=>{if(!log[key])log[key]={};log[key][type]=1;};
+  try{
+    // Food: any day with logged meals
+    for(let k=0;k<localStorage.length;k++){
+      const key=localStorage.key(k);
+      if(key&&key.startsWith('nut_')){
+        const v=ls(key,null);
+        if(v&&v.meals&&v.meals.length)mark(key.slice(4),'food');
+      }
+    }
+    // Sleep: recorded under the night's date; the log happens the next morning
+    const sleeps=ls('sleep_logs',{});
+    Object.keys(sleeps).forEach(nightKey=>{
+      const d=new Date(nightKey+'T12:00:00');d.setDate(d.getDate()+1);
+      mark(d.toISOString().split('T')[0],'sleep');
+    });
+    lss('activity_log',log);
+  }catch(e){console.error(e);}
+  lss('activity_backfilled',1);
+}
+
+// ----- EXERCISE SWAPS -----
+const MUSCLE_ALTS={
+  chest:['Barbell Bench Press','DB Bench Press','Incline Barbell Press','Incline DB Press','Machine Chest Press','Cable Fly','Push-ups','Weighted Dips','Incline DB Fly','Decline Bench Press'],
+  shoulders:['Overhead Press','DB Shoulder Press','Arnold Press','Machine Shoulder Press','Push Press','Landmine Press'],
+  sideDelts:['DB Lateral Raise','Cable Lateral Raise','Machine Lateral Raise','Lateral Raise (21s)','Leaning Cable Raise','Upright Row'],
+  triceps:['Tricep Pushdowns','Rope Pushdown','Overhead Tricep Ext.','Close-Grip DB Press','Skull Crushers','Tricep Dips','Diamond Push-ups','Cable Kickbacks'],
+  backRow:['Barbell Row','Pendlay Row','Single-Arm DB Row','Chest-Supported Row','Seated Cable Row','T-Bar Row','Machine Row'],
+  backLat:['Pull-ups / Chin-ups','Lat Pulldown','Assisted Pull-ups','Lat Pullover','Straight-Arm Pulldown'],
+  rearDelts:['Face Pulls','Reverse Fly','Reverse Pec Deck','Rear Delt Row','Band Pull-Aparts'],
+  biceps:['Barbell Curl','DB Curl','Hammer Curl','Incline DB Curl','Preacher Curl','Cable Curl','Concentration Curl'],
+  quads:['Barbell Back Squat','Front Squat','Leg Press (or Hack Squat)','Hack Squat','Goblet Squat','DB Bulgarian Split Squat','DB Walking Lunges','Step-Ups','Leg Extension'],
+  hamstrings:['Romanian Deadlift','Stiff-Leg Deadlift','Deadlift','Leg Curl (lying/seated)','Nordic Hamstring Curl','Good Mornings','Glute-Ham Raise'],
+  calves:['Standing Calf Raise','Seated Calf Raise','Calf Press','Single-Leg Calf Raise','Donkey Calf Raise'],
+};
+const EX_MUSCLE={
+  'Barbell Bench Press':'chest','Overhead Press':'shoulders','Incline DB Press':'chest','Cable/DB Lateral Raise':'sideDelts','Tricep Pushdowns':'triceps','Overhead Tricep Ext.':'triceps',
+  'Barbell Row':'backRow','Pull-ups / Chin-ups':'backLat','Single-Arm DB Row':'backRow','Face Pulls':'rearDelts','Barbell Curl':'biceps','Hammer Curl':'biceps',
+  'Barbell Back Squat':'quads','Romanian Deadlift':'hamstrings','DB Walking Lunges':'quads','DB Bulgarian Split Squat':'quads','Leg Curl (lying/seated)':'hamstrings','Standing Calf Raise':'calves',
+  'DB Bench Press':'chest','DB Shoulder Press':'shoulders','Incline DB Fly':'chest','Lateral Raise (21s)':'sideDelts','Close-Grip DB Press':'triceps','Tricep Dips':'triceps',
+  'Deadlift':'hamstrings','Chest-Supported Row':'backRow','Lat Pullover':'backLat','Reverse Fly':'rearDelts','Incline DB Curl':'biceps','Concentration Curl':'biceps',
+  'Leg Press (or Hack Squat)':'quads','Stiff-Leg Deadlift':'hamstrings','DB Sumo Squat':'quads','Step-Ups':'quads','Nordic Hamstring Curl':'hamstrings','Seated Calf Raise':'calves',
+};
+let swapOpen=null;
+
+function swapKey(ei){return state.currentWeek+'-'+state.currentDay+'-'+ei;}
+function getSwap(ei){return state.swaps[swapKey(ei)];}
+function origExName(ei){return SPLIT[state.currentDay].exercises[ei].name;}
+function exName(ei){return getSwap(ei)||origExName(ei);}
+
+function toggleSwap(ei){
+  swapOpen=swapOpen===ei?null:ei;
+  if(swapOpen===ei)expandedSet=null; // don't show both panels
+  renderDayContent();
+}
+
+function applySwap(ei,name){
+  if(name===origExName(ei))delete state.swaps[swapKey(ei)];
+  else state.swaps[swapKey(ei)]=name;
+  lss('ex_swaps',state.swaps);
+  swapOpen=null;
+  renderDayContent();
+  showToast(name===origExName(ei)?'Reset to original':'Swapped to '+name);
+}
+
+function resetSwap(ei){applySwap(ei,origExName(ei));}
+
 // ----- WORKOUTS -----
 function renderWorkouts(){
+  renderStreaks();
   renderWeekPills();
   renderDayTabs();
   renderDayContent();
@@ -814,22 +994,37 @@ function renderDayContent(){
 
   day.exercises.forEach((ex,ei)=>{
     const ck=checks[state.currentDay+'-'+ei];
+    const nm=exName(ei);
+    const swapped=!!getSwap(ei);
     const loggedSets=getExSets(ei)||Array.from({length:defaultSetCount(ex)},()=>({weight:'',reps:''}));
     const summary=formatSets(loggedSets);
     const last=lastWeekSets(ei);
     const expanded=expandedSet===ei;
-    html+=`<div class="exercise-row${ck?' ex-row-checked':''}${expanded?' expanded':''}">
-      <button class="ex-check${ck?' checked':''}" onclick="toggleEx(${ei})" aria-label="Check off ${ex.name}">
+    const swapping=swapOpen===ei;
+    html+=`<div class="exercise-row${ck?' ex-row-checked':''}${(expanded||swapping)?' expanded':''}">
+      <button class="ex-check${ck?' checked':''}" onclick="toggleEx(${ei})" aria-label="Check off ${nm}">
         <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
       </button>
       <div class="ex-info" onclick="toggleSetLog(${ei})" style="cursor:pointer">
-        <div class="ex-name">${ex.name}</div>
-        <div class="ex-sets">${ex.sets} sets x ${ex.reps} reps${ex.note?' . '+ex.note:''}</div>
+        <div class="ex-name">${nm}</div>
+        <div class="ex-sets">${ex.sets} sets x ${ex.reps} reps${!swapped&&ex.note?' . '+ex.note:''}</div>
+        ${swapped?`<div class="ex-swapped-tag">Swapped - was ${origExName(ei)}</div>`:''}
         ${summary?`<div class="ex-summary">${summary}</div>`:''}
         ${last?`<div class="ex-last">Last time: ${formatSets(last)}</div>`:''}
       </div>
+      <button class="ex-swap-btn" onclick="toggleSwap(${ei})" aria-label="Swap ${nm}">
+        <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+      </button>
       <button class="ex-log-btn" onclick="toggleSetLog(${ei})" aria-label="Log weights">${expanded?'-':'+'}</button>
     </div>`;
+    if(swapping){
+      const muscle=EX_MUSCLE[origExName(ei)];
+      const opts=(MUSCLE_ALTS[muscle]||[]).filter(o=>o!==nm);
+      html+='<div class="swap-panel"><div class="swap-panel-title">Swap for another exercise:</div><div class="swap-opts">';
+      opts.forEach(o=>{html+=`<button class="swap-opt" data-n="${o}" onclick="applySwap(${ei},this.dataset.n)">${o}</button>`;});
+      if(swapped)html+=`<button class="swap-opt reset" data-n="${origExName(ei)}" onclick="applySwap(${ei},this.dataset.n)">↺ Reset to original</button>`;
+      html+='</div></div>';
+    }
     if(expanded){
       html+='<div class="setlog-panel">';
       loggedSets.forEach((s,si)=>{
@@ -917,6 +1112,7 @@ function toggleEx(ei){
   lss('wk_checks',state.workoutChecks);
 
   if(isDayDone(state.currentDay)){
+    markActivity('workout'); // completed today's workout - counts toward streak
     if(!state.completedDays[state.currentWeek])state.completedDays[state.currentWeek]=[];
     if(!state.completedDays[state.currentWeek].includes(state.currentDay)){
       state.completedDays[state.currentWeek].push(state.currentDay);
@@ -1712,6 +1908,7 @@ function logAllDraft(){
     pushRecent(it.base);
   });
   lss('nut_'+todayStr,state.nutrition);
+  markActivity('food');
   const n=_mealDraft.length;
   _mealDraft=[];_mealDraftUnmatched=[];
   document.getElementById('meal-desc-input').value='';
@@ -2297,6 +2494,7 @@ function addMeal(){
   state.nutrition.totals.carb+=carb;
   state.nutrition.totals.fat+=fat;
   lss('nut_'+todayStr,state.nutrition);
+  markActivity('food');
   if(_pickedFood)pushRecent(_pickedFood._base);
   else pushRecent([name,'serving',cal,pro,carb,fat]);
   ['meal-name-input','meal-cal-input','meal-pro-input','meal-carb-input','meal-fat-input','meal-cal-input-m','meal-pro-input-m','meal-carb-input-m','meal-fat-input-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -2444,6 +2642,7 @@ function logSleep(){
   const dateKey=yesterday.toISOString().split('T')[0];
   logs[dateKey]={bed,wake,mins,dur:`${h}h${m>0?' '+m+'m':''}`,quality:selectedStar,notes,logged:new Date().toISOString()};
   lss('sleep_logs',logs);
+  markActivity('sleep');
   renderSleepHistory();
   renderSleepStreak();
   showToast('Sleep logged!');
@@ -2529,6 +2728,84 @@ function saveApiKey(){
   const status=document.getElementById('api-key-status');
   status.innerHTML='<span style="background:#dcfce7;border:1px solid #bbf7d0;color:#15803d;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px">v Key saved - camera button is now active below</span>';
   setTimeout(()=>{document.getElementById('settings-panel').style.display='none';},2000);
+}
+
+// ----- BACKUP & RESTORE -----
+function buildBackupPayload(){
+  const data={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k==='anthropic_api_key')continue; // never export the API key
+    data[k]=localStorage.getItem(k);
+  }
+  return JSON.stringify({app:'fit-tracker',version:1,exported:new Date().toISOString(),data});
+}
+
+function exportBackup(){
+  const payload=buildBackupPayload();
+  const fname='fit-tracker-backup-'+new Date().toISOString().split('T')[0]+'.json';
+  const ta=document.getElementById('backup-text');
+  if(ta)ta.value=payload; // always leave a copy in the Advanced box
+  const blob=new Blob([payload],{type:'application/json'});
+  try{
+    const file=new File([blob],fname,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:'Fit Tracker backup'})
+        .then(()=>showToast('Backup ready - save it somewhere safe'))
+        .catch(()=>downloadBackup(blob,fname));
+      return;
+    }
+  }catch(e){}
+  downloadBackup(blob,fname);
+}
+
+function downloadBackup(blob,fname){
+  try{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    showToast('Backup saved - keep the file safe');
+  }catch(e){
+    showToast('Copy the backup text under Advanced & save it');
+    const d=document.querySelector('#settings-panel details');
+    if(d)d.open=true;
+  }
+}
+
+function restoreBackupFile(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>applyBackup(r.result);
+  r.onerror=()=>showToast('Could not read that file');
+  r.readAsText(file);
+  e.target.value='';
+}
+
+function restoreBackupText(){
+  const ta=document.getElementById('backup-text');
+  if(!ta||!ta.value.trim()){showToast('Paste your backup text first');return;}
+  applyBackup(ta.value.trim());
+}
+
+function applyBackup(text){
+  let parsed;
+  try{parsed=JSON.parse(text);}catch(e){showToast("That doesn't look like a valid backup");return;}
+  const wrapped=parsed&&parsed.app==='fit-tracker'&&parsed.data&&typeof parsed.data==='object';
+  const data=wrapped?parsed.data:parsed;
+  if(!data||typeof data!=='object'||Array.isArray(data)){showToast("That doesn't look like a valid backup");return;}
+  const keys=Object.keys(data);
+  // Sanity check: must contain at least one recognizable Fit Tracker key
+  const known=['todos','sleep_logs','recent_foods','custom_foods','activity_log','wk_checks','wk_sets','ex_swaps','wk_curweek'];
+  const looksValid=wrapped||keys.some(k=>k.startsWith('nut_')||k.startsWith('wk_')||known.includes(k));
+  if(!keys.length||!looksValid){showToast("That doesn't look like a Fit Tracker backup");return;}
+  if(!confirm('Restore this backup? It will replace the data currently on this phone with the backup.'))return;
+  const apiKey=localStorage.getItem('anthropic_api_key');
+  keys.forEach(k=>{if(k!=='anthropic_api_key'&&typeof data[k]==='string')localStorage.setItem(k,data[k]);});
+  if(apiKey)localStorage.setItem('anthropic_api_key',apiKey); // keep existing key
+  showToast('Restored! Reloading your data...');
+  setTimeout(()=>location.reload(),1000);
 }
 
 // ----- PHOTO SCANNING -----
@@ -2676,6 +2953,7 @@ function clearDone(){
 if(localStorage.getItem('anthropic_api_key')){
   document.getElementById('camera-btn-row').style.display='block';
 }
+backfillActivity();
 renderWorkouts();
 renderMeals();
 renderWalks();
