@@ -16,7 +16,7 @@
   --card-r:16px;--r:10px;
   --shadow:0 1px 4px rgba(234,88,12,.07),0 4px 16px rgba(234,88,12,.05);
 }
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding-top:70px;padding-bottom:16px;font-size:16px;line-height:1.6}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding-top:70px;padding-bottom:16px;font-size:16px;line-height:1.6;overflow-x:hidden}
 h1{font-size:23px;font-weight:600}
 h2{font-size:18px;font-weight:600}
 h3{font-size:16px;font-weight:600}
@@ -28,22 +28,22 @@ h3{font-size:16px;font-weight:600}
 .nav-btn svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
 
 /* Pages */
-.page{display:none;padding:16px;max-width:480px;margin:0 auto}
+.page{display:none;padding:14px;max-width:480px;margin:0 auto}
 .page.active{display:block}
 
 /* Quote banner */
-.quote-banner{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fcd9b0;border-radius:var(--card-r);padding:14px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start}
-.quote-mark{font-size:28px;line-height:1;color:var(--accent);opacity:.4;font-family:Georgia,serif;margin-top:-4px}
-.quote-text{font-size:14px;color:var(--text2);line-height:1.55;font-style:italic}
-.quote-attr{font-size:12px;color:var(--text3);margin-top:4px;font-style:normal;font-weight:600}
+.quote-banner{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fcd9b0;border-radius:12px;padding:9px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start}
+.quote-mark{font-size:20px;line-height:1;color:var(--accent);opacity:.35;font-family:Georgia,serif;margin-top:-1px}
+.quote-text{font-size:12.5px;color:var(--text2);line-height:1.5;font-style:italic}
+.quote-attr{font-size:11px;color:var(--text3);margin-top:2px;font-style:normal;font-weight:600}
 
 /* Header */
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-top:4px}
-.page-title{font-size:25px;font-weight:700}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-top:2px}
+.page-title{font-size:23px;font-weight:700}
 .badge{background:var(--accent3);color:var(--accent);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid #fcd9b0}
 
 /* Cards */
-.card{background:#fff;border:1px solid var(--border);border-radius:var(--card-r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--card-r);padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
 .card-sm{padding:12px}
 
 /* Day tabs */
@@ -78,8 +78,8 @@ h3{font-size:16px;font-weight:600}
 .prog-fill.fat{background:var(--blue)}
 
 /* Macros grid */
-.macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.macro-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center;box-shadow:var(--shadow)}
+.macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.macro-card{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:10px;text-align:center;box-shadow:var(--shadow)}
 .macro-num{font-size:22px;font-weight:700;line-height:1}
 .macro-label{font-size:11px;color:var(--text2);margin-top:4px;font-weight:500}
 .macro-target{font-size:11px;color:var(--text3);margin-top:2px}
@@ -144,6 +144,17 @@ textarea{resize:none;min-height:80px;font-family:inherit}
 
 /* Section title */
 .section-title{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+
+/* Collapsible sections - built at runtime from .section-title markers */
+.sect>.section-title{display:none}
+.sect-label{flex:1;min-width:0}
+.sect-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:4px 0;margin-bottom:10px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;text-align:left;line-height:1.3}
+.sect-head:active{opacity:.6}
+.sect-ic{flex-shrink:0;width:24px;height:24px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--accent);font-size:16px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;text-transform:none;letter-spacing:0}
+.sect.closed>.sect-body{display:none}
+.sect.closed>.sect-head{margin-bottom:16px;color:var(--text3)}
+.sect-peek{font-size:11px;font-weight:600;color:var(--text3);text-transform:none;letter-spacing:0}
+.sect:not(.closed) .sect-peek{display:none} /* the count only helps while folded */
 
 /* Day complete banner */
 .day-complete{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:var(--r);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;display:none}
@@ -223,7 +234,7 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .key-saved-badge{display:inline-flex;align-items:center;gap:5px;background:#dcfce7;border:1px solid #bbf7d0;color:#15803d;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
 
 /* Recent foods */
-.recent-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.recent-chip{background:var(--bg3);border:1px solid var(--border);border-radius:18px;padding:6px 11px;font-size:12.5px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
 .recent-chip:active{border-color:var(--accent)}
 .recent-chip .rc-macro{font-size:11px;color:var(--text3)}
 .recent-chip .rc-remove{font-size:16px;line-height:1;color:var(--text3);padding:2px 2px 2px 6px;margin:-2px -4px -2px 0;border-left:1px solid var(--border)}
@@ -282,19 +293,12 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .desc-totals{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;padding-top:10px;border-top:1.5px solid var(--border)}
 .desc-total-pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--text2)}
 
-/* Barcode scanner modal */
-.barcode-modal{display:none;position:fixed;inset:0;background:#000;z-index:300;flex-direction:column}
-.barcode-modal video{flex:1;width:100%;object-fit:cover;background:#000}
-.barcode-header{display:flex;justify-content:space-between;align-items:center;padding:16px;background:#000}
-.barcode-header .btitle{color:#fff;font-size:15px;font-weight:600}
-.barcode-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1}
-.barcode-status{color:#fff;text-align:center;padding:16px;font-size:14px;background:#000}
-.barcode-manual{background:#000;padding:0 16px 32px}
-.barcode-manual-label{color:#aaa;font-size:13px;text-align:center;margin-bottom:10px;line-height:1.4}
-.barcode-manual-row{display:flex;gap:8px;max-width:360px;margin:0 auto}
-.barcode-manual-row input{flex:1;background:#fff;border:1.5px solid #444;border-radius:10px;color:#1c1209;font-size:16px;padding:12px 14px;outline:none}
-.barcode-manual-row input:focus{border-color:var(--accent);background:#fff;color:#1c1209}
-.barcode-manual-row button{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap}
+/* Barcode number lookup - typed in, no camera */
+.barcode-manual-label{color:var(--text2);font-size:12px;font-weight:600;margin-bottom:6px;line-height:1.4}
+.barcode-manual-row{display:flex;gap:8px}
+.barcode-manual-row input{flex:1;min-width:0}
+.barcode-status{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5}
+.barcode-status:empty{display:none}
 
 /* Set logging */
 .exercise-row.expanded{border-bottom:none}
@@ -396,6 +400,13 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 .tpl-macros{font-size:12px;color:var(--text3);margin-top:1px}
 .tpl-add{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
 .tpl-del{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;flex-shrink:0;line-height:1;padding:0 2px}
+/* Preset builder - pick individual logged items */
+.tpl-pick{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.tpl-pick:last-child{border-bottom:none}
+.tpl-pick-box{width:20px;height:20px;flex-shrink:0;accent-color:var(--accent);margin:0}
+.tpl-pick-info{flex:1;min-width:0}
+.tpl-pick-name{display:block;font-size:14px;font-weight:600;color:var(--text);text-transform:capitalize}
+.tpl-pick-macros{display:block;font-size:12px;color:var(--text3);margin-top:1px}
 
 /* Rest timer */
 .rest-timer{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(120px);background:#1c1209;color:#fff;border-radius:16px;padding:12px 14px;z-index:150;display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.28);transition:transform .25s;opacity:.97}
@@ -411,6 +422,12 @@ input[type=time]:focus{border-color:var(--accent);background:#fff}
 /* ===== Round 2+ additions ===== */
 input[type=number]{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--r);color:var(--text);font-size:16px;padding:12px 14px;width:100%;outline:none;transition:border-color .15s}
 input[type=number]:focus{border-color:var(--accent)}
+/* The rule above is an element+attribute selector, so it outranks the small
+   fixed-width utility classes below and used to stretch them to 100% - blowing
+   their flex rows wider than the screen. Re-assert the widths at equal weight. */
+input[type=number].qty-num-input{width:60px}
+input[type=number].setlog-input{width:64px}
+input[type=number].desc-ri-qty{width:52px}
 
 /* Gym tools: 1RM + plate calc */
 .tool-grid{display:flex;gap:8px}
@@ -600,12 +617,17 @@ input[type=number]:focus{border-color:var(--accent)}
       <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;position:absolute" onchange="handlePhoto(event)">
     </div>
 
-    <div style="margin-bottom:10px">
-      <button onclick="openBarcodeScanner()" style="display:flex;width:100%;background:var(--bg3);border:1.5px dashed var(--border);border-radius:var(--r);padding:14px;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--text2);font-size:14px;font-weight:600;box-sizing:border-box">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2"/><line x1="7" y1="7" x2="7" y2="17"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="13" y1="7" x2="13" y2="17"/><line x1="16" y1="8" x2="16" y2="16"/></svg>
-        Scan barcode
-      </button>
-    </div>
+    <details id="barcode-details" style="margin-bottom:10px">
+      <summary style="font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;padding:4px 0">Look up a packaged food by barcode number</summary>
+      <div style="margin-top:8px">
+        <div class="barcode-manual-label">Type the digits printed under the barcode:</div>
+        <div class="barcode-manual-row">
+          <input type="text" id="barcode-manual-input" inputmode="numeric" autocomplete="off" placeholder="e.g. 0123456789012" onkeydown="if(event.key==='Enter')lookupBarcodeManual()">
+          <button class="btn btn-sm" onclick="lookupBarcodeManual()" style="width:auto;white-space:nowrap">Look up</button>
+        </div>
+        <div id="barcode-status" class="barcode-status"></div>
+      </div>
+    </details>
 
     <div id="scan-status" style="display:none;text-align:center;padding:14px;color:var(--accent);font-size:14px;font-weight:500">
       <div style="margin-bottom:6px">Reading the label...</div>
@@ -652,11 +674,20 @@ input[type=number]:focus{border-color:var(--accent)}
     <div style="text-align:center;padding:16px;color:var(--text3);font-size:14px">No meals logged yet</div>
   </div>
 
-  <div class="section-title" style="margin-top:20px">Meal templates</div>
-  <div class="mini-hint">Save a food combo you eat often, then log it all with one tap.</div>
+  <div class="section-title" style="margin-top:20px">Meal presets</div>
+  <div class="mini-hint">Save a combo you eat often - like your usual breakfast - then log it all with one tap.</div>
   <div class="card card-sm" style="margin-bottom:8px">
     <div id="template-list"></div>
-    <button class="btn btn-ghost btn-sm" onclick="saveTemplateFromToday()" style="width:100%;margin-top:4px">+ Save today's log as a template</button>
+    <button class="btn btn-ghost btn-sm" id="tpl-open-btn" onclick="openTemplatePicker()" style="width:100%;margin-top:4px">+ New preset from today's log</button>
+    <div id="tpl-picker" style="display:none">
+      <div class="mini-hint" style="margin-top:8px">Tick only the items that belong in this preset:</div>
+      <div id="tpl-picker-list"></div>
+      <input type="text" id="tpl-name-input" placeholder="Name it - e.g. Usual breakfast" autocomplete="off" style="margin-top:10px">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-sm" onclick="saveTemplateFromPicker()" style="flex:1;width:auto">Save preset</button>
+        <button class="btn btn-sm btn-ghost" onclick="closeTemplatePicker()" style="width:auto">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <div class="section-title" style="margin-top:20px">Foods to boost your score</div>
@@ -926,23 +957,6 @@ input[type=number]:focus{border-color:var(--accent)}
   <button class="rest-ctrl x" onclick="stopRest()" aria-label="Stop rest timer">&times;</button>
 </div>
 
-<div id="barcode-modal" class="barcode-modal">
-  <div class="barcode-header">
-    <div class="btitle">Scan barcode</div>
-    <button class="barcode-close" onclick="closeBarcodeScanner()" aria-label="Close">&times;</button>
-  </div>
-  <video id="barcode-video" muted playsinline autoplay></video>
-  <div id="barcode-status" class="barcode-status">Point camera at a barcode...</div>
-  <div class="barcode-manual">
-    <div class="barcode-manual-label">Camera not catching it? Type the numbers printed under the barcode:</div>
-    <div class="barcode-manual-row">
-      <input type="text" id="barcode-manual-input" inputmode="numeric" autocomplete="off" placeholder="e.g. 0123456789012" onkeydown="if(event.key==='Enter')lookupBarcodeManual()">
-      <button onclick="lookupBarcodeManual()">Look up</button>
-    </div>
-  </div>
-</div>
-
-<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
 const TARGETS = {cal:2925,pro:180,carb:365,fat:81};
 
@@ -2404,9 +2418,11 @@ function renderRecents(){
   const card=document.getElementById('recent-foods-card');
   const title=document.getElementById('recent-foods-title');
   const list=document.getElementById('recent-foods-list');
-  if(!recents.length){card.style.display='none';title.style.display='none';return;}
+  const sect=title.closest('.sect')||title; // the collapsible wrapper once built
+  if(!recents.length){card.style.display='none';sect.style.display='none';return;}
   card.style.display='block';
-  title.style.display='block';
+  sect.style.display='block';
+  setSectPeek('nutrition:recent-foods',recents.length+' saved');
   list.innerHTML=recents.map((r,i)=>`<div class="recent-chip" onclick="useRecent(${i})"><span>${r.name}</span><span class="rc-macro">${r.cal} cal</span><span class="rc-remove" onclick="removeRecent(event,${i})" aria-label="Remove ${r.name}">&times;</span></div>`).join('');
 }
 
@@ -2424,52 +2440,22 @@ function removeRecent(e,idx){
   renderRecents();
 }
 
-// ----- BARCODE SCANNER -----
-let _barcodeReader=null;
+// ----- BARCODE LOOKUP (typed in - no camera) -----
 let _barcodeProcessing=false;
 
-function openBarcodeScanner(){
-  const modal=document.getElementById('barcode-modal');
-  modal.style.display='flex';
-  _barcodeProcessing=false;
-  document.getElementById('barcode-manual-input').value='';
-  document.getElementById('barcode-status').textContent='Point camera at a barcode...';
-  if(typeof ZXing==='undefined'){
-    document.getElementById('barcode-status').textContent='Camera scanner unavailable - type the barcode below';
-    return;
-  }
-  // Restrict to retail barcode formats + try harder = far more reliable
-  let hints=null;
-  try{
-    hints=new Map();
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
-      ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
-      ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,
-      ZXing.BarcodeFormat.CODE_128
-    ]);
-    hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-  }catch(e){hints=null;}
-  _barcodeReader=new ZXing.BrowserMultiFormatReader(hints);
-  // Force the REAR camera (facingMode:environment) - default often picks the front camera.
-  // Higher resolution = sharper frames = better barcode reads.
-  const constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}};
-  _barcodeReader.decodeFromConstraints(constraints,'barcode-video',(result,err)=>{
-    if(result&&!_barcodeProcessing)onBarcodeDetected(result.getText());
-  }).catch(e=>{
-    document.getElementById('barcode-status').textContent='Camera unavailable - type the barcode below';
-    console.error(e);
-  });
-}
+function bcStatus(msg){document.getElementById('barcode-status').textContent=msg||'';}
 
 function closeBarcodeScanner(){
-  document.getElementById('barcode-modal').style.display='none';
   _barcodeProcessing=false;
-  if(_barcodeReader){try{_barcodeReader.reset();}catch(e){}_barcodeReader=null;}
+  document.getElementById('barcode-manual-input').value='';
+  const d=document.getElementById('barcode-details');
+  if(d)d.open=false;
+  bcStatus('');
 }
 
 function lookupBarcodeManual(){
   const code=(document.getElementById('barcode-manual-input').value||'').replace(/\D/g,'').trim();
-  if(code.length<6){document.getElementById('barcode-status').textContent='Enter the full number under the barcode';return;}
+  if(code.length<6){bcStatus('Enter the full number printed under the barcode');return;}
   onBarcodeDetected(code);
 }
 
@@ -2487,10 +2473,10 @@ function showScannedReview(f){
   document.getElementById('meal-pro-input').value=pro;
   document.getElementById('meal-carb-input').value=carb;
   document.getElementById('meal-fat-input').value=fat;
-  document.getElementById('macro-preview-label').textContent='Scanned "'+name+'" (per '+unitLabel+') - check vs the bag & edit if needed, then Add to log';
+  document.getElementById('macro-preview-label').textContent='Found "'+name+'" (per '+unitLabel+') - check vs the bag & edit if needed, then Add to log';
   document.getElementById('macro-preview').style.display='block';
   document.getElementById('macro-preview').scrollIntoView({behavior:'smooth',block:'center'});
-  showToast('Scanned - double-check the numbers');
+  showToast('Found it - double-check the numbers');
 }
 
 // Second-chance lookup: USDA branded database (~380k US products, label-accurate)
@@ -2505,24 +2491,23 @@ async function usdaBarcodeLookup(code){
 async function onBarcodeDetected(code){
   if(_barcodeProcessing)return;
   _barcodeProcessing=true;
-  if(_barcodeReader){try{_barcodeReader.reset();}catch(e){}_barcodeReader=null;}
-  document.getElementById('barcode-status').textContent='Looking up '+code+'...';
+  bcStatus('Looking up '+code+'...');
   try{
     const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+code+'.json');
     const data=await res.json();
     if(data.status!==1||!data.product){
       // Not in Open Food Facts - try the USDA database before giving up
-      document.getElementById('barcode-status').textContent='Checking USDA database for '+code+'...';
+      bcStatus('Checking USDA database for '+code+'...');
       let uf=null;
       try{uf=await usdaBarcodeLookup(code);}catch(e){console.error(e);}
       if(uf){showScannedReview(uf);return;}
-      document.getElementById('barcode-status').textContent='Not found for '+code+' - double-check the number below, or search it by name in the food box';
+      bcStatus('Not found for '+code+' - double-check the number, or search it by name in the food box below');
       _barcodeProcessing=false;
       return;
     }
     const p=data.product;
     const n=p.nutriments||{};
-    const name=(p.product_name||p.generic_name||'Scanned item').toLowerCase().trim()||'scanned item';
+    const name=(p.product_name||p.generic_name||'Packaged item').toLowerCase().trim()||'packaged item';
     // Prefer per-serving data when it exists, otherwise fall back to per-100g
     const hasServing=n['energy-kcal_serving']!=null||n['proteins_serving']!=null||n['carbohydrates_serving']!=null||n['fat_serving']!=null;
     const suf=hasServing?'_serving':'_100g';
@@ -2540,14 +2525,14 @@ async function onBarcodeDetected(code){
     const unitLabel=hasServing?(p.serving_size||'serving'):'100g';
     if(cal===0&&pro===0&&carb===0&&fat===0){
       // Entry exists but has no nutrition data - USDA is a better bet
-      document.getElementById('barcode-status').textContent='Entry has no nutrition data - checking USDA...';
+      bcStatus('Entry has no nutrition data - checking USDA...');
       let uf=null;
       try{uf=await usdaBarcodeLookup(code);}catch(e){console.error(e);}
       if(uf){showScannedReview(uf);return;}
     }
     showScannedReview([name,unitLabel,cal,pro,carb,fat]);
   }catch(e){
-    document.getElementById('barcode-status').textContent='Lookup failed - check your connection and try again';
+    bcStatus('Lookup failed - check your connection and try again');
     console.error(e);
     _barcodeProcessing=false;
   }
@@ -3300,16 +3285,40 @@ function setWater(n){
 
 // ----- MEAL TEMPLATES -----
 function getTemplates(){return ls('meal_templates',[]);}
-function saveTemplateFromToday(){
+// A preset is built from hand-picked items, not the whole day - breakfast repeats,
+// lunch usually doesn't, so saving the entire log made presets unusable.
+function openTemplatePicker(){
   const meals=state.nutrition.meals;
-  if(!meals.length){showToast('Log some meals first, then save them');return;}
-  const name=prompt('Name this template (e.g. Chicken + rice + broccoli):');
-  if(!name||!name.trim())return;
-  const items=meals.map(m=>({name:m.name,cal:m.cal,pro:m.pro,carb:m.carb,fat:m.fat}));
-  const tpls=getTemplates(); tpls.push({name:name.trim(),items});
+  if(!meals.length){showToast('Log the foods first, then tick the ones to save');return;}
+  document.getElementById('tpl-picker-list').innerHTML=meals.map((m,i)=>`
+    <label class="tpl-pick">
+      <input type="checkbox" class="tpl-pick-box" value="${i}" checked>
+      <span class="tpl-pick-info">
+        <span class="tpl-pick-name">${m.name}</span>
+        <span class="tpl-pick-macros">${Math.round(m.cal)} cal · ${Math.round(m.pro)}g P · ${m.time}</span>
+      </span>
+    </label>`).join('');
+  document.getElementById('tpl-name-input').value='';
+  document.getElementById('tpl-picker').style.display='block';
+  document.getElementById('tpl-open-btn').style.display='none';
+}
+
+function closeTemplatePicker(){
+  document.getElementById('tpl-picker').style.display='none';
+  document.getElementById('tpl-open-btn').style.display='block';
+}
+
+function saveTemplateFromPicker(){
+  const picked=[...document.querySelectorAll('.tpl-pick-box:checked')].map(b=>state.nutrition.meals[+b.value]).filter(Boolean);
+  if(!picked.length){showToast('Tick at least one item');return;}
+  const name=(document.getElementById('tpl-name-input').value||'').trim();
+  if(!name){showToast('Give the preset a name');document.getElementById('tpl-name-input').focus();return;}
+  const items=picked.map(m=>({name:m.name,cal:m.cal,pro:m.pro,carb:m.carb,fat:m.fat}));
+  const tpls=getTemplates(); tpls.push({name,items});
   lss('meal_templates',tpls);
+  closeTemplatePicker();
   renderTemplates();
-  showToast('Template saved!');
+  showToast('Saved "'+name+'"');
 }
 function logTemplate(idx){
   const t=getTemplates()[idx]; if(!t)return;
@@ -3330,7 +3339,8 @@ function deleteTemplate(idx){
 function renderTemplates(){
   const el=document.getElementById('template-list'); if(!el)return;
   const tpls=getTemplates();
-  if(!tpls.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0">No templates yet - log a meal combo, then save it.</div>';return;}
+  setSectPeek('nutrition:meal-presets',tpls.length?tpls.length+' saved':'');
+  if(!tpls.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0">No presets yet - log the foods, then pick the ones to save.</div>';return;}
   el.innerHTML=tpls.map((t,i)=>{
     const tot=t.items.reduce((a,it)=>({cal:a.cal+it.cal,pro:a.pro+it.pro}),{cal:0,pro:0});
     return `<div class="tpl-chip">
@@ -3849,7 +3859,85 @@ function checkBedtimeNudge(){
   }
 }
 
+// ----- COLLAPSIBLE SECTIONS -----
+// Every `.section-title` in a page becomes a tappable +/- header, and everything
+// between it and the next `.section-title` becomes its collapsible body. Doing it
+// at runtime means no page markup has to change and new sections get it for free.
+
+// Reference-ish sections that are useful but not needed every visit - start folded.
+const SECT_CLOSED_DEFAULT=[
+  'nutrition:recent-foods','nutrition:meal-presets','nutrition:foods-to-boost-your-score',
+  'sleep:sleep-debt-consistency','sleep:bedtime-reminder','sleep:recovery-tips',
+  'progress:weekly-volume-by-muscle','progress:gym-tools','progress:badges'
+];
+
+function sectKey(page,label){
+  return page+':'+label.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+function sectIsClosed(key){
+  const saved=localStorage.getItem('sect_'+key);
+  if(saved!==null)return saved==='1';
+  return SECT_CLOSED_DEFAULT.includes(key);
+}
+
+// Small hint on a folded header so you can see what's inside without opening it.
+function setSectPeek(key,text){
+  const el=document.querySelector('[data-key="'+key+'"] .sect-peek');
+  if(el)el.textContent=text||'';
+}
+
+function toggleSect(wrap){
+  const closed=!wrap.classList.contains('closed');
+  wrap.classList.toggle('closed',closed);
+  wrap.querySelector('.sect-ic').textContent=closed?'+':'−';
+  localStorage.setItem('sect_'+wrap.dataset.key,closed?'1':'0');
+}
+
+function buildSections(){
+  document.querySelectorAll('.page').forEach(page=>{
+    const pid=page.id.replace('page-','');
+    page.querySelectorAll('.section-title').forEach(title=>{
+      const label=title.textContent.trim();
+      if(!label)return;
+      const key=sectKey(pid,label);
+      const wrap=document.createElement('div');
+      wrap.className='sect';
+      wrap.dataset.key=key;
+      // Sections that start hidden (e.g. Recent foods) keep that behaviour on the wrapper.
+      if(title.style.display==='none')wrap.style.display='none';
+      if(title.style.marginTop)wrap.style.marginTop=title.style.marginTop;
+      title.parentNode.insertBefore(wrap,title);
+
+      const head=document.createElement('button');
+      head.type='button';
+      head.className='sect-head';
+      head.innerHTML='<span class="sect-label"></span><span class="sect-peek"></span><span class="sect-ic"></span>';
+      head.querySelector('.sect-label').textContent=label;
+      head.addEventListener('click',()=>toggleSect(wrap));
+
+      const body=document.createElement('div');
+      body.className='sect-body';
+      let n=title.nextSibling;
+      while(n&&!(n.nodeType===1&&n.classList.contains('section-title'))){
+        const next=n.nextSibling;
+        body.appendChild(n);
+        n=next;
+      }
+
+      wrap.appendChild(head);
+      wrap.appendChild(title); // kept in the DOM (hidden) so existing id lookups still work
+      wrap.appendChild(body);
+
+      const closed=sectIsClosed(key);
+      wrap.classList.toggle('closed',closed);
+      wrap.querySelector('.sect-ic').textContent=closed?'+':'−';
+    });
+  });
+}
+
 // ----- INIT -----
+buildSections();
 applyTheme();
 if(localStorage.getItem('anthropic_api_key')){
   document.getElementById('camera-btn-row').style.display='block';
